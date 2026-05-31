@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -27,13 +28,10 @@ import java.net.URL
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(onBookClick: (File) -> Unit) {
+fun HomeScreen(onBookClick: (File) -> Unit, onProfileClick: () -> Unit) { // নতুন অপশন onProfileClick
     var books by remember { mutableStateOf<List<Book>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
-    
-    // নতুন: সার্চের জন্য State
     var searchQuery by remember { mutableStateOf("") }
-    
     var isDownloading by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -62,7 +60,6 @@ fun HomeScreen(onBookClick: (File) -> Unit) {
             }
     }
 
-    // নতুন: সার্চ কোয়েরি অনুযায়ী বই ফিল্টার করা
     val filteredBooks = books.filter { book ->
         book.title.contains(searchQuery, ignoreCase = true) || 
         book.author.contains(searchQuery, ignoreCase = true) ||
@@ -72,14 +69,23 @@ fun HomeScreen(onBookClick: (File) -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("My Library", color = MaterialTheme.colorScheme.primary) }
+                title = { Text("My Library", color = MaterialTheme.colorScheme.primary) },
+                actions = {
+                    // নতুন: প্রোফাইল আইকন
+                    IconButton(onClick = onProfileClick) {
+                        Icon(
+                            imageVector = Icons.Default.AccountCircle, 
+                            contentDescription = "Profile", 
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                }
             )
         }
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
             Column(modifier = Modifier.fillMaxSize()) {
-                
-                // নতুন: সার্চ বার UI
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
@@ -127,12 +133,8 @@ fun HomeScreen(onBookClick: (File) -> Unit) {
                 }
             }
 
-            // ডাউনলোডের সময় লোডিং ইন্ডিকেটর
             if (isDownloading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Card(elevation = CardDefaults.cardElevation(8.dp)) {
                         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                             CircularProgressIndicator()
@@ -165,9 +167,7 @@ fun BookCard(book: Book, onClick: () -> Unit) {
                     .clip(RoundedCornerShape(8.dp)),
                 contentScale = ContentScale.Crop
             )
-            
             Spacer(modifier = Modifier.width(16.dp))
-            
             Column {
                 Text(text = book.title, style = MaterialTheme.typography.titleLarge)
                 Spacer(modifier = Modifier.height(4.dp))
@@ -187,20 +187,11 @@ suspend fun downloadPdf(context: android.content.Context, urlString: String, boo
     return withContext(Dispatchers.IO) {
         try {
             val file = File(context.cacheDir, "$bookId.pdf")
-            if (file.exists() && file.length() > 0) {
-                return@withContext file
-            }
+            if (file.exists() && file.length() > 0) return@withContext file
             val url = URL(urlString)
-            val connection = url.openConnection()
-            connection.connect()
-
-            val input = connection.getInputStream()
-            val output = FileOutputStream(file)
-
-            input.use { input ->
-                output.use { output ->
-                    input.copyTo(output)
-                }
+            val connection = url.openConnection().apply { connect() }
+            connection.getInputStream().use { input ->
+                FileOutputStream(file).use { output -> input.copyTo(output) }
             }
             file
         } catch (e: Exception) {
