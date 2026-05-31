@@ -69,7 +69,7 @@ fun ProfileScreen(
             }
             Spacer(modifier = Modifier.height(16.dp))
             
-            // নতুন: Share App এবং Rate Us বাটন
+            // Share App এবং Rate Us বাটন
             Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                 Column {
                     Row(modifier = Modifier.fillMaxWidth().clickable {
@@ -85,7 +85,8 @@ fun ProfileScreen(
                         Text("Share App with Friends", style = MaterialTheme.typography.titleMedium)
                     }
                     
-                    HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+                    // ফিক্স: HorizontalDivider এর বদলে শুধু Divider ব্যবহার করা হলো
+                    Divider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
                     
                     Row(modifier = Modifier.fillMaxWidth().clickable {
                         val uri = Uri.parse("market://details?id=${context.packageName}")
