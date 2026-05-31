@@ -9,6 +9,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Search
@@ -34,41 +36,39 @@ import java.net.URL
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(onBookClick: (File, String) -> Unit, onProfileClick: () -> Unit, onAddBookClick: () -> Unit) {
+fun HomeScreen(
+    onBookClick: (File, String) -> Unit, 
+    onProfileClick: () -> Unit, 
+    onAddBookClick: () -> Unit,
+    onEditBookClick: (Book) -> Unit // নতুন: এডিট স্ক্রিনে যাওয়ার জন্য
+) {
     var books by remember { mutableStateOf<List<Book>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var searchQuery by remember { mutableStateOf("") }
     var isDownloading by remember { mutableStateOf(false) }
-    
-    // নতুন: কোন ট্যাব সিলেক্ট করা আছে তা বোঝার জন্য
     var showFavoritesOnly by remember { mutableStateOf(false) }
+    
+    // নতুন: ডিলিট অ্যালার্ট দেখানোর জন্য
+    var bookToDelete by remember { mutableStateOf<Book?>(null) } 
 
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val db = FirebaseFirestore.getInstance()
 
     val auth = FirebaseAuth.getInstance()
     val isAdmin = auth.currentUser?.email?.equals("rafuse2024@gmail.com", ignoreCase = true) == true
 
-    // নতুন: SharedPreferences ব্যবহার করে ফেভারিট বইয়ের লিস্ট লোকালি সেভ করা
     val sharedPreferences = remember { context.getSharedPreferences("MyReaderPrefs", Context.MODE_PRIVATE) }
-    var favoriteBookIds by remember {
-        mutableStateOf(sharedPreferences.getStringSet("favorites", emptySet()) ?: emptySet())
-    }
+    var favoriteBookIds by remember { mutableStateOf(sharedPreferences.getStringSet("favorites", emptySet()) ?: emptySet()) }
 
-    // ফেভারিট বাটনে চাপলে অ্যাড বা রিমুভ করার ফাংশন
     fun toggleFavorite(bookId: String) {
         val newFavorites = favoriteBookIds.toMutableSet()
-        if (newFavorites.contains(bookId)) {
-            newFavorites.remove(bookId)
-        } else {
-            newFavorites.add(bookId)
-        }
+        if (newFavorites.contains(bookId)) newFavorites.remove(bookId) else newFavorites.add(bookId)
         favoriteBookIds = newFavorites
         sharedPreferences.edit().putStringSet("favorites", newFavorites).apply()
     }
 
     LaunchedEffect(Unit) {
-        val db = FirebaseFirestore.getInstance()
         db.collection("books").addSnapshotListener { snapshot, e ->
             if (e != null || snapshot == null) {
                 isLoading = false
@@ -91,15 +91,28 @@ fun HomeScreen(onBookClick: (File, String) -> Unit, onProfileClick: () -> Unit, 
         }
     }
 
-    // নতুন: সার্চ এবং ফেভারিট ট্যাবের ওপর ভিত্তি করে বই ফিল্টার করা
     val filteredBooks = books.filter { book ->
-        val matchesSearch = book.title.contains(searchQuery, ignoreCase = true) || 
-                            book.author.contains(searchQuery, ignoreCase = true) ||
-                            book.category.contains(searchQuery, ignoreCase = true)
-        
+        val matchesSearch = book.title.contains(searchQuery, ignoreCase = true) || book.author.contains(searchQuery, ignoreCase = true) || book.category.contains(searchQuery, ignoreCase = true)
         val matchesTab = if (showFavoritesOnly) favoriteBookIds.contains(book.id) else true
-        
         matchesSearch && matchesTab
+    }
+
+    // নতুন: ডিলিট কনফার্মেশন পপ-আপ
+    if (bookToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { bookToDelete = null },
+            title = { Text("Delete Book") },
+            text = { Text("Are you sure you want to delete '${bookToDelete?.title}'? This cannot be undone.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    db.collection("books").document(bookToDelete!!.id).delete()
+                    bookToDelete = null
+                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { bookToDelete = null }) { Text("Cancel") }
+            }
+        )
     }
 
     Scaffold(
@@ -132,21 +145,9 @@ fun HomeScreen(onBookClick: (File, String) -> Unit, onProfileClick: () -> Unit, 
                     colors = TextFieldDefaults.outlinedTextFieldColors(focusedBorderColor = MaterialTheme.colorScheme.primary, unfocusedBorderColor = MaterialTheme.colorScheme.outline)
                 )
 
-                // নতুন: All Books এবং Favorites ট্যাব
-                TabRow(
-                    selectedTabIndex = if (showFavoritesOnly) 1 else 0,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Tab(
-                        selected = !showFavoritesOnly,
-                        onClick = { showFavoritesOnly = false },
-                        text = { Text("All Books") }
-                    )
-                    Tab(
-                        selected = showFavoritesOnly,
-                        onClick = { showFavoritesOnly = true },
-                        text = { Text("Favorites") }
-                    )
+                TabRow(selectedTabIndex = if (showFavoritesOnly) 1 else 0, modifier = Modifier.fillMaxWidth()) {
+                    Tab(selected = !showFavoritesOnly, onClick = { showFavoritesOnly = false }, text = { Text("All Books") })
+                    Tab(selected = showFavoritesOnly, onClick = { showFavoritesOnly = true }, text = { Text("Favorites") })
                 }
 
                 if (isLoading) {
@@ -158,13 +159,14 @@ fun HomeScreen(onBookClick: (File, String) -> Unit, onProfileClick: () -> Unit, 
                 } else {
                     LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp, top = 8.dp), modifier = Modifier.fillMaxSize()) {
                         items(filteredBooks) { book ->
-                            // ফেভারিট চেক করা হচ্ছে
                             val isFav = favoriteBookIds.contains(book.id)
-                            
                             BookCard(
                                 book = book, 
                                 isFavorite = isFav,
+                                isAdmin = isAdmin, // অ্যাডমিন কি না তা পাস করা হচ্ছে
                                 onFavoriteClick = { toggleFavorite(book.id) },
+                                onEditClick = { onEditBookClick(book) },     // এডিট ক্লিক
+                                onDeleteClick = { bookToDelete = book },     // ডিলিট ক্লিক
                                 onClick = {
                                     if (book.fileUrl.isNotEmpty()) {
                                         isDownloading = true
@@ -197,13 +199,21 @@ fun HomeScreen(onBookClick: (File, String) -> Unit, onProfileClick: () -> Unit, 
 }
 
 @Composable
-fun BookCard(book: Book, isFavorite: Boolean, onFavoriteClick: () -> Unit, onClick: () -> Unit) {
+fun BookCard(
+    book: Book, 
+    isFavorite: Boolean, 
+    isAdmin: Boolean, 
+    onFavoriteClick: () -> Unit, 
+    onEditClick: () -> Unit,
+    onDeleteClick: () -> Unit,
+    onClick: () -> Unit
+) {
     Card(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp).clickable { onClick() }, elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             AsyncImage(model = book.coverImageUrl, contentDescription = "Book Cover", modifier = Modifier.width(80.dp).height(120.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
             Spacer(modifier = Modifier.width(16.dp))
             
-            Column(modifier = Modifier.weight(1f)) { // weight(1f) দেওয়ায় টেক্সটগুলো জায়গা নিয়ে হার্ট আইকনকে ডানদিকে ঠেলে দেবে
+            Column(modifier = Modifier.weight(1f)) { 
                 Text(text = book.title, style = MaterialTheme.typography.titleLarge)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(text = "Author: ${book.author}", style = MaterialTheme.typography.bodyMedium)
@@ -211,13 +221,25 @@ fun BookCard(book: Book, isFavorite: Boolean, onFavoriteClick: () -> Unit, onCli
                 Text(text = "Category: ${book.category}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             }
             
-            // নতুন: ফেভারিট হার্ট বাটন
-            IconButton(onClick = onFavoriteClick) {
-                Icon(
-                    imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    contentDescription = "Favorite Icon",
-                    tint = if (isFavorite) Color.Red else Color.Gray // সিলেক্ট থাকলে লাল, নাহলে ছাই রঙের হবে
-                )
+            Column(horizontalAlignment = Alignment.End) {
+                IconButton(onClick = onFavoriteClick) {
+                    Icon(
+                        imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = "Favorite Icon",
+                        tint = if (isFavorite) Color.Red else Color.Gray
+                    )
+                }
+                // নতুন: অ্যাডমিন হলে এডিট এবং ডিলিট আইকন দেখাবে
+                if (isAdmin) {
+                    Row {
+                        IconButton(onClick = onEditClick) {
+                            Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color(0xFF1976D2)) // নীল রঙ
+                        }
+                        IconButton(onClick = onDeleteClick) {
+                            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color(0xFFD32F2F)) // লাল রঙ
+                        }
+                    }
+                }
             }
         }
     }

@@ -21,11 +21,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
+import com.premium.myreader.data.Book
 import com.premium.myreader.ui.theme.MyReaderTheme
 import com.premium.myreader.ui.HomeScreen
 import com.premium.myreader.ui.PdfReaderScreen
 import com.premium.myreader.ui.ProfileScreen
 import com.premium.myreader.ui.AddBookScreen
+import com.premium.myreader.ui.EditBookScreen // নতুন ইমপোর্ট
 import com.premium.myreader.ui.SplashScreen
 import java.io.File
 import dagger.hilt.android.AndroidEntryPoint
@@ -36,6 +38,7 @@ sealed class Screen {
     object Home : Screen()
     object Profile : Screen() 
     object AddBook : Screen()
+    data class EditBook(val book: Book) : Screen() // নতুন: এডিট স্ক্রিন
     data class Reader(val file: File, val title: String) : Screen()
 }
 
@@ -44,12 +47,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            // লোকাল স্টোরেজ থেকে ডার্ক মোড সেটিংস পড়া হচ্ছে
             val context = LocalContext.current
             val sharedPreferences = remember { context.getSharedPreferences("MyReaderPrefs", Context.MODE_PRIVATE) }
             var isDarkMode by remember { mutableStateOf(sharedPreferences.getBoolean("dark_mode", false)) }
 
-            // থিমে ডার্ক মোড ভ্যালু পাস করা হচ্ছে
             MyReaderTheme(darkTheme = isDarkMode) {
                 var currentScreen by remember { mutableStateOf<Screen>(Screen.Splash) }
 
@@ -62,24 +63,27 @@ class MainActivity : ComponentActivity() {
                     }
                     is Screen.Home -> {
                         HomeScreen(
-                            onBookClick = { downloadedFile, bookTitle -> 
-                                currentScreen = Screen.Reader(downloadedFile, bookTitle) 
-                            },
+                            onBookClick = { downloadedFile, bookTitle -> currentScreen = Screen.Reader(downloadedFile, bookTitle) },
                             onProfileClick = { currentScreen = Screen.Profile },
-                            onAddBookClick = { currentScreen = Screen.AddBook }
+                            onAddBookClick = { currentScreen = Screen.AddBook },
+                            onEditBookClick = { book -> currentScreen = Screen.EditBook(book) } // নতুন যুক্ত হলো
                         )
                     }
                     is Screen.AddBook -> {
                         BackHandler { currentScreen = Screen.Home }
                         AddBookScreen(onBackClick = { currentScreen = Screen.Home })
                     }
+                    is Screen.EditBook -> { // নতুন স্ক্রিন ম্যানেজমেন্ট
+                        BackHandler { currentScreen = Screen.Home }
+                        EditBookScreen(book = screen.book, onBackClick = { currentScreen = Screen.Home })
+                    }
                     is Screen.Profile -> {
                         BackHandler { currentScreen = Screen.Home }
                         ProfileScreen(
-                            isDarkMode = isDarkMode, // থিম স্ট্যাটাস পাস করা হলো
+                            isDarkMode = isDarkMode, 
                             onThemeToggle = { isDark ->
                                 isDarkMode = isDark
-                                sharedPreferences.edit().putBoolean("dark_mode", isDark).apply() // সেভ রাখা হলো
+                                sharedPreferences.edit().putBoolean("dark_mode", isDark).apply() 
                             },
                             onBackClick = { currentScreen = Screen.Home }, 
                             onLogout = { currentScreen = Screen.Login }
@@ -87,11 +91,7 @@ class MainActivity : ComponentActivity() {
                     }
                     is Screen.Reader -> {
                         BackHandler { currentScreen = Screen.Home }
-                        PdfReaderScreen(
-                            file = screen.file, 
-                            title = screen.title, 
-                            onBackClick = { currentScreen = Screen.Home }
-                        )
+                        PdfReaderScreen(file = screen.file, title = screen.title, onBackClick = { currentScreen = Screen.Home })
                     }
                 }
             }
