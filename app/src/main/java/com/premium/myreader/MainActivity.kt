@@ -41,11 +41,13 @@ class MainActivity : ComponentActivity() {
                         })
                     }
                     is Screen.Reader -> {
-                        // রিডার স্ক্রিন থেকে ব্যাক বাটনে চাপলে হোমে ফিরে আসবে
                         BackHandler {
                             currentScreen = Screen.Home
                         }
-                        PdfReaderScreen(file = screen.file)
+                        // এখানে onBackClick যুক্ত করা হলো
+                        PdfReaderScreen(file = screen.file, onBackClick = {
+                            currentScreen = Screen.Home 
+                        })
                     }
                 }
             }
