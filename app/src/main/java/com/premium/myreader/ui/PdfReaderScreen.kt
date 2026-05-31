@@ -15,7 +15,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -58,6 +57,13 @@ fun PdfReaderScreen(file: File, title: String, onBackClick: () -> Unit) {
     LaunchedEffect(listState.firstVisibleItemIndex) {
         sharedPreferences.edit().putInt(bookKey, listState.firstVisibleItemIndex).apply()
     }
+    
+    // প্রোগ্রেস বারের জন্য মোট পৃষ্ঠা সেভ রাখা হচ্ছে
+    LaunchedEffect(pdfRenderer?.pageCount) {
+        pdfRenderer?.pageCount?.let { total ->
+            sharedPreferences.edit().putInt("total_pages_${file.name}", total).apply()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -67,8 +73,8 @@ fun PdfReaderScreen(file: File, title: String, onBackClick: () -> Unit) {
                     IconButton(onClick = onBackClick) { Icon(Icons.Default.ArrowBack, contentDescription = "Back") }
                 },
                 actions = {
-                    // নতুন: ডিরেক্ট ফোন মেমোরিতে ডাউনলোড করার অপশন
-                    IconButton(onClick = {
+                    // ফিক্স: আইকনের বদলে "SAVE" টেক্সট বাটন ব্যবহার করা হয়েছে
+                    TextButton(onClick = {
                         try {
                             val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
                             if (!downloadsDir.exists()) downloadsDir.mkdirs()
@@ -82,7 +88,7 @@ fun PdfReaderScreen(file: File, title: String, onBackClick: () -> Unit) {
                             Toast.makeText(context, "Failed to save file", Toast.LENGTH_SHORT).show()
                         }
                     }) {
-                        Icon(Icons.Default.Download, contentDescription = "Save to Device")
+                        Text("SAVE", color = MaterialTheme.colorScheme.onPrimary, style = MaterialTheme.typography.labelLarge)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
