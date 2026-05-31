@@ -17,7 +17,12 @@ import com.google.firebase.auth.FirebaseAuth
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileScreen(onBackClick: () -> Unit, onLogout: () -> Unit) {
+fun ProfileScreen(
+    isDarkMode: Boolean,              // নতুন: ডার্ক মোড স্টেট রিসিভ করবে
+    onThemeToggle: (Boolean) -> Unit, // নতুন: থিম চেঞ্জ করার ফাংশন
+    onBackClick: () -> Unit, 
+    onLogout: () -> Unit
+) {
     val auth = FirebaseAuth.getInstance()
     val user = auth.currentUser
     val userEmail = user?.email ?: "Guest User"
@@ -41,7 +46,6 @@ fun ProfileScreen(onBackClick: () -> Unit, onLogout: () -> Unit) {
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // প্রোফাইল আইকন
             Box(
                 modifier = Modifier
                     .size(100.dp)
@@ -58,23 +62,40 @@ fun ProfileScreen(onBackClick: () -> Unit, onLogout: () -> Unit) {
             }
             
             Spacer(modifier = Modifier.height(24.dp))
-            
             Text(text = "Welcome!", style = MaterialTheme.typography.headlineSmall)
             Spacer(modifier = Modifier.height(8.dp))
-            // ইউজারের ইমেইল অথবা গেস্ট স্ট্যাটাস দেখাবে
             Text(text = userEmail, style = MaterialTheme.typography.bodyLarge, color = Color.Gray)
+            
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            // নতুন: ডার্ক মোড অন/অফ করার সুইচ
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(text = "Dark Mode", style = MaterialTheme.typography.titleMedium)
+                    Switch(
+                        checked = isDarkMode,
+                        onCheckedChange = onThemeToggle
+                    )
+                }
+            }
             
             Spacer(modifier = Modifier.height(48.dp))
             
-            // লগ-আউট বাটন
             Button(
                 onClick = {
-                    auth.signOut() // ফায়ারবেস থেকে লগ-আউট
-                    onLogout()     // লগ-ইন স্ক্রিনে ফেরত পাঠানো
+                    auth.signOut()
+                    onLogout()
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
+                modifier = Modifier.fillMaxWidth().height(50.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
             ) {
                 Text("Logout")

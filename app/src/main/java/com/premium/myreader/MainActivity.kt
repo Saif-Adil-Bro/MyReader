@@ -1,5 +1,6 @@
 package com.premium.myreader
 
+import android.content.Context
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -35,7 +36,7 @@ sealed class Screen {
     object Home : Screen()
     object Profile : Screen() 
     object AddBook : Screen()
-    data class Reader(val file: File, val title: String) : Screen() // নতুন: টাইটেল হোল্ড করবে
+    data class Reader(val file: File, val title: String) : Screen()
 }
 
 @AndroidEntryPoint
@@ -43,7 +44,13 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MyReaderTheme {
+            // লোকাল স্টোরেজ থেকে ডার্ক মোড সেটিংস পড়া হচ্ছে
+            val context = LocalContext.current
+            val sharedPreferences = remember { context.getSharedPreferences("MyReaderPrefs", Context.MODE_PRIVATE) }
+            var isDarkMode by remember { mutableStateOf(sharedPreferences.getBoolean("dark_mode", false)) }
+
+            // থিমে ডার্ক মোড ভ্যালু পাস করা হচ্ছে
+            MyReaderTheme(darkTheme = isDarkMode) {
                 var currentScreen by remember { mutableStateOf<Screen>(Screen.Splash) }
 
                 when (val screen = currentScreen) {
@@ -55,7 +62,7 @@ class MainActivity : ComponentActivity() {
                     }
                     is Screen.Home -> {
                         HomeScreen(
-                            onBookClick = { downloadedFile, bookTitle -> // নতুন: টাইটেল সহ পাঠাবে
+                            onBookClick = { downloadedFile, bookTitle -> 
                                 currentScreen = Screen.Reader(downloadedFile, bookTitle) 
                             },
                             onProfileClick = { currentScreen = Screen.Profile },
@@ -68,13 +75,21 @@ class MainActivity : ComponentActivity() {
                     }
                     is Screen.Profile -> {
                         BackHandler { currentScreen = Screen.Home }
-                        ProfileScreen(onBackClick = { currentScreen = Screen.Home }, onLogout = { currentScreen = Screen.Login })
+                        ProfileScreen(
+                            isDarkMode = isDarkMode, // থিম স্ট্যাটাস পাস করা হলো
+                            onThemeToggle = { isDark ->
+                                isDarkMode = isDark
+                                sharedPreferences.edit().putBoolean("dark_mode", isDark).apply() // সেভ রাখা হলো
+                            },
+                            onBackClick = { currentScreen = Screen.Home }, 
+                            onLogout = { currentScreen = Screen.Login }
+                        )
                     }
                     is Screen.Reader -> {
                         BackHandler { currentScreen = Screen.Home }
                         PdfReaderScreen(
                             file = screen.file, 
-                            title = screen.title, // নতুন: টাইটেল রিডার পেজে পাস করছে
+                            title = screen.title, 
                             onBackClick = { currentScreen = Screen.Home }
                         )
                     }

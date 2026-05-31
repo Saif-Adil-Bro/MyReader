@@ -28,7 +28,7 @@ import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PdfReaderScreen(file: File, title: String, onBackClick: () -> Unit) { // নতুন: title যুক্ত করা হয়েছে
+fun PdfReaderScreen(file: File, title: String, onBackClick: () -> Unit) { 
     var pdfRenderer by remember { mutableStateOf<PdfRenderer?>(null) }
     
     val context = LocalContext.current
@@ -54,7 +54,7 @@ fun PdfReaderScreen(file: File, title: String, onBackClick: () -> Unit) { // ন
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(title, maxLines = 1) }, // নতুন: ফাইলের নামের বদলে আসল টাইটেল দেখাবে
+                title = { Text(title, maxLines = 1) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) { 
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -62,12 +62,12 @@ fun PdfReaderScreen(file: File, title: String, onBackClick: () -> Unit) { // ন
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
                 )
             )
         },
-        containerColor = Color(0xFFECEFF1)
+        containerColor = MaterialTheme.colorScheme.background // নতুন: ডার্ক মোড সাপোর্ট করবে
     ) { paddingValues ->
         pdfRenderer?.let { renderer ->
             LazyColumn(
