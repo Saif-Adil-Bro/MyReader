@@ -85,8 +85,19 @@ class MainActivity : ComponentActivity() {
                             ProfileScreen(isDarkMode = isDarkMode, onThemeToggle = { isDark -> isDarkMode = isDark; sharedPreferences.edit().putBoolean("dark_mode", isDark).apply() }, onBackClick = { currentScreen = Screen.Home }, onLogout = { currentScreen = Screen.Login })
                         }
                         is Screen.Reader -> { 
-                            // ফিক্সড: রিডার স্ক্রিন থেকে ব্যাক করলে সরাসরি হোমে যাবে
-                            BackHandler { currentScreen = Screen.Home }
+                            // ফিক্স: এখানেও Named arguments ব্যবহার করা হলো
+                            BackHandler { 
+                                currentScreen = Screen.Details(
+                                    Book(
+                                        id = screen.file.name.replace(".pdf",""), 
+                                        title = screen.title, 
+                                        author = "Unknown", 
+                                        category = "Downloaded", 
+                                        coverImageUrl = "", 
+                                        fileUrl = ""
+                                    )
+                                ) 
+                            }
                             PdfReaderScreen(file = screen.file, title = screen.title, onBackClick = { currentScreen = Screen.Home }) 
                         }
                     }

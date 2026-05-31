@@ -33,7 +33,7 @@ import java.io.File
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    onBookClick: (Book) -> Unit, // আপডেট: এখন সরাসরি বইয়ের ডাটা পাঠাবে 
+    onBookClick: (Book) -> Unit, 
     onProfileClick: () -> Unit, 
     onAddBookClick: () -> Unit,
     onEditBookClick: (Book) -> Unit 
@@ -72,7 +72,17 @@ fun HomeScreen(
             if (e != null || snapshot == null) { isLoading = false; return@addSnapshotListener }
             val list = mutableListOf<Book>()
             for (document in snapshot.documents) {
-                list.add(Book(document.id, document.getString("title") ?: "", document.getString("author") ?: "", document.getString("category") ?: "", document.getString("coverImageUrl") ?: "", document.getString("fileUrl") ?: ""))
+                // ফিক্স: এখানে ভ্যারিয়েবলের নাম নির্দিষ্ট (Named argument) করে দেওয়া হলো যাতে উলটপালট না হয়
+                list.add(
+                    Book(
+                        id = document.id,
+                        title = document.getString("title") ?: "",
+                        author = document.getString("author") ?: "",
+                        category = document.getString("category") ?: "",
+                        coverImageUrl = document.getString("coverImageUrl") ?: "",
+                        fileUrl = document.getString("fileUrl") ?: ""
+                    )
+                )
             }
             books = list
             isLoading = false
@@ -128,7 +138,6 @@ fun HomeScreen(
 
 @Composable
 fun BookCard(book: Book, isFavorite: Boolean, isAdmin: Boolean, onFavoriteClick: () -> Unit, onEditClick: () -> Unit, onDeleteClick: () -> Unit, onClick: () -> Unit) {
-    // নতুন: Progress Bar Calculation
     val context = LocalContext.current
     val sharedPreferences = remember { context.getSharedPreferences("MyReaderPrefs", Context.MODE_PRIVATE) }
     val lastPage = sharedPreferences.getInt("last_page_${book.id}.pdf", 0)
@@ -148,7 +157,6 @@ fun BookCard(book: Book, isFavorite: Boolean, isAdmin: Boolean, onFavoriteClick:
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(text = book.category, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                 
-                // প্রোগ্রেস বার UI
                 if (totalPages > 0) {
                     Spacer(modifier = Modifier.height(8.dp))
                     LinearProgressIndicator(progress = progress, modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)), color = MaterialTheme.colorScheme.primary)
