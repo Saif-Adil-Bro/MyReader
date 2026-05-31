@@ -25,84 +25,66 @@ fun AddBookScreen(onBackClick: () -> Unit) {
     val context = LocalContext.current
     val db = FirebaseFirestore.getInstance()
 
+    // ম্যাজিক ফাংশন: ড্রাইভ শেয়ারেবল লিংককে ডিরেক্ট লিংকে কনভার্ট করবে
+    fun getDirectLink(link: String): String {
+        if (link.contains("drive.google.com")) {
+            val regex = "d/([a-zA-Z0-9_-]+)".toRegex()
+            val match = regex.find(link)
+            if (match != null) {
+                val fileId = match.groupValues[1]
+                return "https://drive.google.com/uc?export=download&id=$fileId"
+            }
+        }
+        return link // ড্রাইভের লিংক না হলে যেমন আছে তেমনই থাকবে
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Add New Book (Admin)") },
+                title = { Text("Add New Book") },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
+                    IconButton(onClick = onBackClick) { Icon(Icons.Default.ArrowBack, contentDescription = "Back") }
                 }
             )
         }
     ) { paddingValues ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp),
+            modifier = Modifier.fillMaxSize().padding(paddingValues).padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            OutlinedTextField(
-                value = title,
-                onValueChange = { title = it },
-                label = { Text("Book Title") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
+            OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Book Title") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = author,
-                onValueChange = { author = it },
-                label = { Text("Author Name") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
+            OutlinedTextField(value = author, onValueChange = { author = it }, label = { Text("Author Name") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = category,
-                onValueChange = { category = it },
-                label = { Text("Category (e.g., Novel, Science)") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
+            OutlinedTextField(value = category, onValueChange = { category = it }, label = { Text("Category") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = coverUrl,
-                onValueChange = { coverUrl = it },
-                label = { Text("Cover Image URL (Drive Direct Link)") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
+            OutlinedTextField(value = coverUrl, onValueChange = { coverUrl = it }, label = { Text("Cover Image URL (Optional)") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = pdfUrl,
-                onValueChange = { pdfUrl = it },
-                label = { Text("PDF File URL (Drive Direct Link)") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
+            OutlinedTextField(value = pdfUrl, onValueChange = { pdfUrl = it }, label = { Text("PDF / File URL") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             Spacer(modifier = Modifier.height(24.dp))
 
             Button(
                 onClick = {
                     if (title.isNotEmpty() && author.isNotEmpty() && pdfUrl.isNotEmpty()) {
                         isLoading = true
-                        // ডাটাবেসে সেভ করার জন্য ডাটা প্রস্তুত করা
+                        
+                        val finalPdfUrl = getDirectLink(pdfUrl)
+                        // কভার লিংক ফাঁকা থাকলে একটি ডিফল্ট সুন্দর কভার ছবি সেভ হবে
+                        val finalCoverUrl = if (coverUrl.isBlank()) "https://ui-avatars.com/api/?name=${title.replace(" ", "+")}&background=random&color=fff&size=512" else coverUrl
+
                         val bookData = hashMapOf(
                             "title" to title,
                             "author" to author,
                             "category" to category,
-                            "coverImageUrl" to coverUrl,
-                            "fileUrl" to pdfUrl
+                            "coverImageUrl" to finalCoverUrl,
+                            "fileUrl" to finalPdfUrl
                         )
-                        // ফায়ারবেসে পুশ করা
+                        
                         db.collection("books").add(bookData)
                             .addOnSuccessListener {
                                 isLoading = false
                                 Toast.makeText(context, "Book Added Successfully!", Toast.LENGTH_SHORT).show()
-                                onBackClick() // কাজ শেষ হলে হোমে ফিরে যাবে
+                                onBackClick() 
                             }
                             .addOnFailureListener { e ->
                                 isLoading = false
@@ -115,11 +97,8 @@ fun AddBookScreen(onBackClick: () -> Unit) {
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 enabled = !isLoading
             ) {
-                if (isLoading) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(24.dp))
-                } else {
-                    Text("Upload Book")
-                }
+                if (isLoading) CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(24.dp))
+                else Text("Add Book")
             }
         }
     }

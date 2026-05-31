@@ -3,7 +3,9 @@ package com.premium.myreader.ui
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
+import android.os.Environment
 import android.os.ParcelFileDescriptor
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -13,6 +15,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -61,14 +64,32 @@ fun PdfReaderScreen(file: File, title: String, onBackClick: () -> Unit) {
             TopAppBar(
                 title = { Text(title, maxLines = 1) },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) { 
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    IconButton(onClick = onBackClick) { Icon(Icons.Default.ArrowBack, contentDescription = "Back") }
+                },
+                actions = {
+                    // নতুন: ডিরেক্ট ফোন মেমোরিতে ডাউনলোড করার অপশন
+                    IconButton(onClick = {
+                        try {
+                            val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                            if (!downloadsDir.exists()) downloadsDir.mkdirs()
+                            
+                            val destFile = File(downloadsDir, "$title.pdf")
+                            file.copyTo(destFile, overwrite = true)
+                            
+                            Toast.makeText(context, "Saved to Downloads folder!", Toast.LENGTH_LONG).show()
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                            Toast.makeText(context, "Failed to save file", Toast.LENGTH_SHORT).show()
+                        }
+                    }) {
+                        Icon(Icons.Default.Download, contentDescription = "Save to Device")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
                 )
             )
         },
@@ -95,8 +116,6 @@ fun PdfReaderScreen(file: File, title: String, onBackClick: () -> Unit) {
 @Composable
 fun PdfPage(renderer: PdfRenderer, pageIndex: Int) {
     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
-    
-    // জুম করার জন্য State
     var scale by remember { mutableStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
 
@@ -111,7 +130,7 @@ fun PdfPage(renderer: PdfRenderer, pageIndex: Int) {
         withContext(Dispatchers.IO) { 
             try {
                 val page = renderer.openPage(pageIndex)
-                val renderScale = 2.5f // রেজ্যুলেশন আরও ক্লিয়ার করা হলো জুমের জন্য
+                val renderScale = 2.5f 
                 val renderedBitmap = Bitmap.createBitmap((page.width * renderScale).toInt(), (page.height * renderScale).toInt(), Bitmap.Config.ARGB_8888)
                 renderedBitmap.eraseColor(android.graphics.Color.WHITE) 
                 page.render(renderedBitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
@@ -130,36 +149,21 @@ fun PdfPage(renderer: PdfRenderer, pageIndex: Int) {
             .shadow(8.dp, RoundedCornerShape(8.dp))
             .clip(RoundedCornerShape(8.dp))
             .background(Color.White)
-            .clipToBounds() // জুম করলে যেন বক্সের বাইরে না যায়
+            .clipToBounds() 
             .pointerInput(Unit) {
                 detectTransformGestures { _, pan, zoom, _ ->
-                    // সর্বোচ্চ ৩ গুণ বড় করা যাবে
                     scale = (scale * zoom).coerceIn(1f, 3f) 
                     val maxX = (size.width * (scale - 1)) / 2
                     val maxY = (size.height * (scale - 1)) / 2
                     offset = if (scale > 1f) {
-                        Offset(
-                            (offset.x + pan.x).coerceIn(-maxX, maxX),
-                            (offset.y + pan.y).coerceIn(-maxY, maxY)
-                        )
+                        Offset((offset.x + pan.x).coerceIn(-maxX, maxX), (offset.y + pan.y).coerceIn(-maxY, maxY))
                     } else Offset.Zero
                 }
             },
         contentAlignment = Alignment.Center
     ) {
         bitmap?.let { b ->
-            Image(
-                bitmap = b.asImageBitmap(), 
-                contentDescription = "Page $pageIndex", 
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer(
-                        scaleX = scale, 
-                        scaleY = scale,
-                        translationX = offset.x, 
-                        translationY = offset.y
-                    )
-            )
+            Image(bitmap = b.asImageBitmap(), contentDescription = "Page $pageIndex", modifier = Modifier.fillMaxSize().graphicsLayer(scaleX = scale, scaleY = scale, translationX = offset.x, translationY = offset.y))
         } ?: CircularProgressIndicator(color = MaterialTheme.colorScheme.primary) 
     }
 }

@@ -47,11 +47,12 @@ fun HomeScreen(
     var isLoading by remember { mutableStateOf(true) }
     var searchQuery by remember { mutableStateOf("") }
     var isDownloading by remember { mutableStateOf(false) }
-    var showFavoritesOnly by remember { mutableStateOf(false) }
+    
+    // নতুন: ৩টি ট্যাব ম্যানেজ করার জন্য (0 = All, 1 = Favorites, 2 = Downloaded)
+    var selectedTabIndex by remember { mutableStateOf(0) } 
+    
     var bookToDelete by remember { mutableStateOf<Book?>(null) } 
     var isAdmin by remember { mutableStateOf(false) }
-
-    // নতুন: ক্যাটাগরি ফিল্টারের জন্য
     var selectedCategory by remember { mutableStateOf("All") }
 
     val context = LocalContext.current
@@ -101,14 +102,20 @@ fun HomeScreen(
         }
     }
 
-    // বইয়ের লিস্ট থেকে ডুপ্লিকেট ছাড়া সব ক্যাটাগরির নাম বের করা হলো
     val categories = listOf("All") + books.map { it.category }.filter { it.isNotBlank() }.distinct().sorted()
 
+    // ফিল্টারিং লজিক আপডেট করা হয়েছে
     val filteredBooks = books.filter { book ->
         val matchesSearch = book.title.contains(searchQuery, ignoreCase = true) || book.author.contains(searchQuery, ignoreCase = true)
-        val matchesTab = if (showFavoritesOnly) favoriteBookIds.contains(book.id) else true
         val matchesCategory = if (selectedCategory == "All") true else book.category.equals(selectedCategory, ignoreCase = true)
-        matchesSearch && matchesTab && matchesCategory
+        
+        val matchesTab = when (selectedTabIndex) {
+            1 -> favoriteBookIds.contains(book.id) // ফেভারিট চেক
+            2 -> File(context.cacheDir, "${book.id}.pdf").exists() // ডাউনলোড বা অফলাইন ফাইল চেক
+            else -> true // অল বুকস
+        }
+        
+        matchesSearch && matchesCategory && matchesTab
     }
 
     if (bookToDelete != null) {
@@ -158,7 +165,6 @@ fun HomeScreen(
                     colors = TextFieldDefaults.outlinedTextFieldColors(focusedBorderColor = MaterialTheme.colorScheme.primary, unfocusedBorderColor = MaterialTheme.colorScheme.outline)
                 )
                 
-                // নতুন: Category Chips
                 LazyRow(
                     modifier = Modifier.fillMaxWidth(),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
@@ -173,16 +179,23 @@ fun HomeScreen(
                     }
                 }
 
-                TabRow(selectedTabIndex = if (showFavoritesOnly) 1 else 0, modifier = Modifier.fillMaxWidth()) {
-                    Tab(selected = !showFavoritesOnly, onClick = { showFavoritesOnly = false }, text = { Text("All Books") })
-                    Tab(selected = showFavoritesOnly, onClick = { showFavoritesOnly = true }, text = { Text("Favorites") })
+                // নতুন: ৩টি ট্যাব (All Books, Favorites, Downloaded)
+                TabRow(selectedTabIndex = selectedTabIndex, modifier = Modifier.fillMaxWidth()) {
+                    Tab(selected = selectedTabIndex == 0, onClick = { selectedTabIndex = 0 }, text = { Text("All Books") })
+                    Tab(selected = selectedTabIndex == 1, onClick = { selectedTabIndex = 1 }, text = { Text("Favorites") })
+                    Tab(selected = selectedTabIndex == 2, onClick = { selectedTabIndex = 2 }, text = { Text("Downloaded") })
                 }
 
                 if (isLoading) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                 } else if (filteredBooks.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { 
-                        Text(if (showFavoritesOnly && books.isNotEmpty()) "No favorite books yet." else if (books.isEmpty()) "No books available." else "No books found in this category.") 
+                        val emptyText = when (selectedTabIndex) {
+                            1 -> if (books.isNotEmpty()) "No favorite books yet." else "No books available."
+                            2 -> if (books.isNotEmpty()) "No offline books available. Read a book to download it automatically." else "No books available."
+                            else -> "No books found."
+                        }
+                        Text(emptyText) 
                     }
                 } else {
                     LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp, top = 8.dp), modifier = Modifier.fillMaxSize()) {
