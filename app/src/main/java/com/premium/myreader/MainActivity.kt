@@ -12,7 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.premium.myreader.ui.theme.MyReaderTheme
 import com.premium.myreader.ui.HomeScreen
-import com.premium.myreader.ui.screens.PdfReaderScreen
+import com.premium.myreader.ui.PdfReaderScreen // <-- এই লাইনটি ঠিক করা হয়েছে
 import java.io.File
 import dagger.hilt.android.AndroidEntryPoint
 
