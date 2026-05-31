@@ -5,7 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.Favorite // (আইকনটি পরিবর্তন করা হলো)
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -52,7 +52,7 @@ fun SplashScreen(onNavigateToHome: () -> Unit, onNavigateToLogin: () -> Unit) {
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(
-                imageVector = Icons.Default.MenuBook, // বইয়ের আইকন
+                imageVector = Icons.Default.Favorite, // (এখানেও পরিবর্তন করা হলো)
                 contentDescription = "App Logo",
                 tint = Color.White,
                 modifier = Modifier
