@@ -1,6 +1,5 @@
 package com.premium.myreader
 
-import android.content.Context
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -28,7 +27,7 @@ import com.premium.myreader.ui.PdfReaderScreen
 import com.premium.myreader.ui.ProfileScreen
 import com.premium.myreader.ui.AddBookScreen
 import com.premium.myreader.ui.EditBookScreen
-import com.premium.myreader.ui.BookDetailsScreen // নতুন ইমপোর্ট
+import com.premium.myreader.ui.BookDetailsScreen
 import com.premium.myreader.ui.SplashScreen
 import java.io.File
 import dagger.hilt.android.AndroidEntryPoint
@@ -40,7 +39,7 @@ sealed class Screen {
     object Profile : Screen() 
     object AddBook : Screen()
     data class EditBook(val book: Book) : Screen() 
-    data class Details(val book: Book) : Screen() // নতুন রুট
+    data class Details(val book: Book) : Screen() 
     data class Reader(val file: File, val title: String) : Screen()
 }
 
@@ -64,7 +63,7 @@ class MainActivity : ComponentActivity() {
                         is Screen.Login -> LoginScreen(onLoginSuccess = { currentScreen = Screen.Home })
                         is Screen.Home -> {
                             HomeScreen(
-                                onBookClick = { book -> currentScreen = Screen.Details(book) }, // আপডেট করা হলো
+                                onBookClick = { book -> currentScreen = Screen.Details(book) }, 
                                 onProfileClick = { currentScreen = Screen.Profile },
                                 onAddBookClick = { currentScreen = Screen.AddBook },
                                 onEditBookClick = { book -> currentScreen = Screen.EditBook(book) } 
@@ -72,8 +71,6 @@ class MainActivity : ComponentActivity() {
                         }
                         is Screen.AddBook -> { BackHandler { currentScreen = Screen.Home }; AddBookScreen(onBackClick = { currentScreen = Screen.Home }) }
                         is Screen.EditBook -> { BackHandler { currentScreen = Screen.Home }; EditBookScreen(book = screen.book, onBackClick = { currentScreen = Screen.Home }) }
-                        
-                        // নতুন: Details Screen
                         is Screen.Details -> {
                             BackHandler { currentScreen = Screen.Home }
                             BookDetailsScreen(
@@ -82,12 +79,14 @@ class MainActivity : ComponentActivity() {
                                 onReadClick = { file, title -> currentScreen = Screen.Reader(file, title) }
                             )
                         }
-
                         is Screen.Profile -> {
                             BackHandler { currentScreen = Screen.Home }
                             ProfileScreen(isDarkMode = isDarkMode, onThemeToggle = { isDark -> isDarkMode = isDark; sharedPreferences.edit().putBoolean("dark_mode", isDark).apply() }, onBackClick = { currentScreen = Screen.Home }, onLogout = { currentScreen = Screen.Login })
                         }
-                        is Screen.Reader -> { BackHandler { currentScreen = Screen.Home }; PdfReaderScreen(file = screen.file, title = screen.title, onBackClick = { currentScreen = Screen.Home }) }
+                        is Screen.Reader -> { 
+                            BackHandler { currentScreen = Screen.Home }
+                            PdfReaderScreen(file = screen.file, title = screen.title, onBackClick = { currentScreen = Screen.Home }) 
+                        }
                     }
                 }
             }
@@ -102,7 +101,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
     var password by remember { mutableStateOf("") }
     var isSignUpMode by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
-    var showResetDialog by remember { mutableStateOf(false) } // নতুন স্টেট
+    var showResetDialog by remember { mutableStateOf(false) } 
     
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
@@ -118,7 +117,6 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
         OutlinedTextField(value = password, onValueChange = { password = it }, label = { Text("Password") }, leadingIcon = { Icon(Icons.Default.Lock, "Password") }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), singleLine = true)
         Spacer(modifier = Modifier.height(8.dp))
 
-        // নতুন: Forgot Password বাটন
         if (!isSignUpMode) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 TextButton(onClick = { showResetDialog = true }) { Text("Forgot Password?", color = MaterialTheme.colorScheme.primary) }
@@ -154,7 +152,6 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
         }, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(12.dp), enabled = !isLoading) { Text("Continue as Guest") }
     }
 
-    // নতুন: Forgot Password Dialog
     if (showResetDialog) {
         var resetEmail by remember { mutableStateOf("") }
         AlertDialog(
@@ -165,7 +162,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                 TextButton(onClick = {
                     if (resetEmail.isNotEmpty()) {
                         auth.sendPasswordResetEmail(resetEmail).addOnCompleteListener { task ->
-                            if (task.isSuccessful) Toast.makeText(context, "Reset link sent to your email!", Toast.LENGTH_LONG).show()
+                            if (task.isSuccessful) Toast.makeText(context, "Reset link sent!", Toast.LENGTH_LONG).show()
                             else Toast.makeText(context, task.exception?.message, Toast.LENGTH_LONG).show()
                         }
                         showResetDialog = false

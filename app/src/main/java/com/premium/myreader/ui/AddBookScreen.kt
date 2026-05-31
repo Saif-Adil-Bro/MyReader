@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.google.firebase.firestore.FirebaseFirestore
+import java.net.URLEncoder
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -25,7 +26,6 @@ fun AddBookScreen(onBackClick: () -> Unit) {
     val context = LocalContext.current
     val db = FirebaseFirestore.getInstance()
 
-    // ম্যাজিক ফাংশন: ড্রাইভ শেয়ারেবল লিংককে ডিরেক্ট লিংকে কনভার্ট করবে
     fun getDirectLink(link: String): String {
         if (link.contains("drive.google.com")) {
             val regex = "d/([a-zA-Z0-9_-]+)".toRegex()
@@ -35,7 +35,7 @@ fun AddBookScreen(onBackClick: () -> Unit) {
                 return "https://drive.google.com/uc?export=download&id=$fileId"
             }
         }
-        return link // ড্রাইভের লিংক না হলে যেমন আছে তেমনই থাকবে
+        return link 
     }
 
     Scaffold(
@@ -69,8 +69,14 @@ fun AddBookScreen(onBackClick: () -> Unit) {
                         isLoading = true
                         
                         val finalPdfUrl = getDirectLink(pdfUrl)
-                        // কভার লিংক ফাঁকা থাকলে একটি ডিফল্ট সুন্দর কভার ছবি সেভ হবে
-                        val finalCoverUrl = if (coverUrl.isBlank()) "https://ui-avatars.com/api/?name=${title.replace(" ", "+")}&background=random&color=fff&size=512" else coverUrl
+                        
+                        // ফিক্স: কভার লিংকেও কনভার্টার অ্যাড করা হলো
+                        val finalCoverUrl = if (coverUrl.isBlank()) {
+                            val encodedTitle = URLEncoder.encode(title, "UTF-8")
+                            "https://ui-avatars.com/api/?name=$encodedTitle&background=random&color=fff&size=512"
+                        } else {
+                            getDirectLink(coverUrl)
+                        }
 
                         val bookData = hashMapOf(
                             "title" to title,

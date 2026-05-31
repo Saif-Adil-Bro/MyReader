@@ -2,6 +2,7 @@ package com.premium.myreader.ui
 
 import android.content.Context
 import android.content.Intent
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -38,7 +39,6 @@ fun BookDetailsScreen(book: Book, onBackClick: () -> Unit, onReadClick: (File, S
                 title = { Text("Book Details") },
                 navigationIcon = { IconButton(onClick = onBackClick) { Icon(Icons.Default.ArrowBack, "Back") } },
                 actions = {
-                    // নতুন: নির্দিষ্ট বই শেয়ার করার আইকন
                     IconButton(onClick = {
                         val shareIntent = Intent(Intent.ACTION_SEND).apply {
                             type = "text/plain"
@@ -83,9 +83,18 @@ fun BookDetailsScreen(book: Book, onBackClick: () -> Unit, onReadClick: (File, S
                     onClick = {
                         isDownloading = true
                         coroutineScope.launch {
-                            val file = downloadPdfLocally(context, book.fileUrl, book.id)
-                            isDownloading = false
-                            if (file != null) onReadClick(file, book.title)
+                            try {
+                                val file = downloadPdfLocally(context, book.fileUrl, book.id)
+                                isDownloading = false
+                                if (file != null && file.exists() && file.length() > 0) {
+                                    onReadClick(file, book.title)
+                                } else {
+                                    Toast.makeText(context, "Failed to load PDF. File corrupted or URL invalid.", Toast.LENGTH_LONG).show()
+                                }
+                            } catch (e: Exception) {
+                                isDownloading = false
+                                Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+                            }
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(55.dp),
@@ -108,6 +117,7 @@ suspend fun downloadPdfLocally(context: Context, urlString: String, bookId: Stri
             connection.getInputStream().use { input -> FileOutputStream(file).use { output -> input.copyTo(output) } }
             file
         } catch (e: Exception) {
+            e.printStackTrace()
             null
         }
     }

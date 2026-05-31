@@ -12,6 +12,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.premium.myreader.data.Book
+import java.net.URLEncoder
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,7 +70,14 @@ fun EditBookScreen(book: Book, onBackClick: () -> Unit) {
                         isLoading = true
                         
                         val finalPdfUrl = getDirectLink(pdfUrl)
-                        val finalCoverUrl = if (coverUrl.isBlank()) "https://ui-avatars.com/api/?name=${title.replace(" ", "+")}&background=random&color=fff&size=512" else coverUrl
+                        
+                        // ফিক্স: কভার লিংকেও কনভার্টার অ্যাড করা হলো
+                        val finalCoverUrl = if (coverUrl.isBlank()) {
+                            val encodedTitle = URLEncoder.encode(title, "UTF-8")
+                            "https://ui-avatars.com/api/?name=$encodedTitle&background=random&color=fff&size=512"
+                        } else {
+                            getDirectLink(coverUrl)
+                        }
 
                         val bookData = mapOf(
                             "title" to title,
