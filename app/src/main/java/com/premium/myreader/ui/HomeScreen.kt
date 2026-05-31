@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -48,9 +49,10 @@ fun HomeScreen(
     var isDownloading by remember { mutableStateOf(false) }
     var showFavoritesOnly by remember { mutableStateOf(false) }
     var bookToDelete by remember { mutableStateOf<Book?>(null) } 
-    
-    // নতুন: isAdmin স্টেট তৈরি করা হলো
     var isAdmin by remember { mutableStateOf(false) }
+
+    // নতুন: ক্যাটাগরি ফিল্টারের জন্য
+    var selectedCategory by remember { mutableStateOf("All") }
 
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -69,7 +71,6 @@ fun HomeScreen(
     }
 
     LaunchedEffect(Unit) {
-        // নতুন: ইউজারের রোল চেক করা হচ্ছে
         if (currentUser != null) {
             db.collection("users").document(currentUser.uid).get().addOnSuccessListener { document ->
                 if (document != null && document.getString("role") == "admin") {
@@ -100,10 +101,14 @@ fun HomeScreen(
         }
     }
 
+    // বইয়ের লিস্ট থেকে ডুপ্লিকেট ছাড়া সব ক্যাটাগরির নাম বের করা হলো
+    val categories = listOf("All") + books.map { it.category }.filter { it.isNotBlank() }.distinct().sorted()
+
     val filteredBooks = books.filter { book ->
-        val matchesSearch = book.title.contains(searchQuery, ignoreCase = true) || book.author.contains(searchQuery, ignoreCase = true) || book.category.contains(searchQuery, ignoreCase = true)
+        val matchesSearch = book.title.contains(searchQuery, ignoreCase = true) || book.author.contains(searchQuery, ignoreCase = true)
         val matchesTab = if (showFavoritesOnly) favoriteBookIds.contains(book.id) else true
-        matchesSearch && matchesTab
+        val matchesCategory = if (selectedCategory == "All") true else book.category.equals(selectedCategory, ignoreCase = true)
+        matchesSearch && matchesTab && matchesCategory
     }
 
     if (bookToDelete != null) {
@@ -147,11 +152,26 @@ fun HomeScreen(
                 OutlinedTextField(
                     value = searchQuery, onValueChange = { searchQuery = it },
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                    placeholder = { Text("Search by title, author or category...") },
+                    placeholder = { Text("Search by title or author...") },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search Icon") },
                     shape = RoundedCornerShape(12.dp), singleLine = true,
                     colors = TextFieldDefaults.outlinedTextFieldColors(focusedBorderColor = MaterialTheme.colorScheme.primary, unfocusedBorderColor = MaterialTheme.colorScheme.outline)
                 )
+                
+                // নতুন: Category Chips
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(categories) { category ->
+                        FilterChip(
+                            selected = selectedCategory == category,
+                            onClick = { selectedCategory = category },
+                            label = { Text(category) }
+                        )
+                    }
+                }
 
                 TabRow(selectedTabIndex = if (showFavoritesOnly) 1 else 0, modifier = Modifier.fillMaxWidth()) {
                     Tab(selected = !showFavoritesOnly, onClick = { showFavoritesOnly = false }, text = { Text("All Books") })
@@ -162,7 +182,7 @@ fun HomeScreen(
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                 } else if (filteredBooks.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { 
-                        Text(if (showFavoritesOnly && books.isNotEmpty()) "No favorite books yet." else if (books.isEmpty()) "No books available." else "No books found.") 
+                        Text(if (showFavoritesOnly && books.isNotEmpty()) "No favorite books yet." else if (books.isEmpty()) "No books available." else "No books found in this category.") 
                     }
                 } else {
                     LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp, top = 8.dp), modifier = Modifier.fillMaxSize()) {

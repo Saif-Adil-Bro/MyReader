@@ -12,14 +12,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
-    isDarkMode: Boolean,              // নতুন: ডার্ক মোড স্টেট রিসিভ করবে
-    onThemeToggle: (Boolean) -> Unit, // নতুন: থিম চেঞ্জ করার ফাংশন
+    isDarkMode: Boolean,
+    onThemeToggle: (Boolean) -> Unit,
     onBackClick: () -> Unit, 
     onLogout: () -> Unit
 ) {
@@ -68,7 +69,7 @@ fun ProfileScreen(
             
             Spacer(modifier = Modifier.height(32.dp))
             
-            // নতুন: ডার্ক মোড অন/অফ করার সুইচ
+            // ডার্ক মোড সুইচ
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
@@ -85,6 +86,27 @@ fun ProfileScreen(
                         checked = isDarkMode,
                         onCheckedChange = onThemeToggle
                     )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // নতুন: About App & Developer Info
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(text = "About App", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(text = "My Reader v1.0", style = MaterialTheme.typography.bodyMedium)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(text = "Developed by Abu Aymaan Abdullah", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                 }
             }
             
