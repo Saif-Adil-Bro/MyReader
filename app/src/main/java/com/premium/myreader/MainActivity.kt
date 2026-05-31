@@ -1,5 +1,6 @@
 package com.premium.myreader
 
+import android.content.Context
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -84,6 +85,7 @@ class MainActivity : ComponentActivity() {
                             ProfileScreen(isDarkMode = isDarkMode, onThemeToggle = { isDark -> isDarkMode = isDark; sharedPreferences.edit().putBoolean("dark_mode", isDark).apply() }, onBackClick = { currentScreen = Screen.Home }, onLogout = { currentScreen = Screen.Login })
                         }
                         is Screen.Reader -> { 
+                            // ফিক্সড: রিডার স্ক্রিন থেকে ব্যাক করলে সরাসরি হোমে যাবে
                             BackHandler { currentScreen = Screen.Home }
                             PdfReaderScreen(file = screen.file, title = screen.title, onBackClick = { currentScreen = Screen.Home }) 
                         }
