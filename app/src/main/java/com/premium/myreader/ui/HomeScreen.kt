@@ -30,7 +30,7 @@ import java.net.URL
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(onBookClick: (File) -> Unit, onProfileClick: () -> Unit, onAddBookClick: () -> Unit) { 
+fun HomeScreen(onBookClick: (File, String) -> Unit, onProfileClick: () -> Unit, onAddBookClick: () -> Unit) { // নতুন: String যুক্ত করা হয়েছে
     var books by remember { mutableStateOf<List<Book>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var searchQuery by remember { mutableStateOf("") }
@@ -39,7 +39,6 @@ fun HomeScreen(onBookClick: (File) -> Unit, onProfileClick: () -> Unit, onAddBoo
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     
-    // অ্যাডমিন চেক ফিক্স করা হলো (ছোট/বড় হাতের অক্ষর যাই হোক না কেন কাজ করবে)
     val auth = FirebaseAuth.getInstance()
     val isAdmin = auth.currentUser?.email?.equals("rafuse2024@gmail.com", ignoreCase = true) == true
 
@@ -86,11 +85,7 @@ fun HomeScreen(onBookClick: (File) -> Unit, onProfileClick: () -> Unit, onAddBoo
         },
         floatingActionButton = {
             if (isAdmin) {
-                FloatingActionButton(
-                    onClick = onAddBookClick,
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                ) {
+                FloatingActionButton(onClick = onAddBookClick, containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary) {
                     Icon(Icons.Default.Add, contentDescription = "Add Book")
                 }
             }
@@ -99,32 +94,20 @@ fun HomeScreen(onBookClick: (File) -> Unit, onProfileClick: () -> Unit, onAddBoo
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
             Column(modifier = Modifier.fillMaxSize()) {
                 OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
+                    value = searchQuery, onValueChange = { searchQuery = it },
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                     placeholder = { Text("Search by title, author or category...") },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search Icon") },
-                    shape = RoundedCornerShape(12.dp),
-                    singleLine = true,
-                    colors = TextFieldDefaults.outlinedTextFieldColors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                    )
+                    shape = RoundedCornerShape(12.dp), singleLine = true,
+                    colors = TextFieldDefaults.outlinedTextFieldColors(focusedBorderColor = MaterialTheme.colorScheme.primary, unfocusedBorderColor = MaterialTheme.colorScheme.outline)
                 )
 
                 if (isLoading) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                 } else if (filteredBooks.isEmpty()) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(if (books.isEmpty()) "No books available." else "No books found matching your search.")
-                    }
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(if (books.isEmpty()) "No books available." else "No books found matching your search.") }
                 } else {
-                    LazyColumn(
-                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp, top = 8.dp),
-                        modifier = Modifier.fillMaxSize()
-                    ) {
+                    LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp, top = 8.dp), modifier = Modifier.fillMaxSize()) {
                         items(filteredBooks) { book ->
                             BookCard(book = book, onClick = {
                                 if (book.fileUrl.isNotEmpty()) {
@@ -132,7 +115,8 @@ fun HomeScreen(onBookClick: (File) -> Unit, onProfileClick: () -> Unit, onAddBoo
                                     coroutineScope.launch {
                                         val downloadedFile = downloadPdf(context, book.fileUrl, book.id)
                                         isDownloading = false
-                                        if (downloadedFile != null) onBookClick(downloadedFile)
+                                        // নতুন: ফাইলের সাথে বইয়ের নামও পাঠানো হচ্ছে
+                                        if (downloadedFile != null) onBookClick(downloadedFile, book.title) 
                                     }
                                 }
                             })
@@ -158,16 +142,9 @@ fun HomeScreen(onBookClick: (File) -> Unit, onProfileClick: () -> Unit, onAddBoo
 
 @Composable
 fun BookCard(book: Book, onClick: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp).clickable { onClick() },
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
+    Card(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp).clickable { onClick() }, elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)) {
         Row(modifier = Modifier.padding(16.dp)) {
-            AsyncImage(
-                model = book.coverImageUrl, contentDescription = "Book Cover",
-                modifier = Modifier.width(80.dp).height(120.dp).clip(RoundedCornerShape(8.dp)),
-                contentScale = ContentScale.Crop
-            )
+            AsyncImage(model = book.coverImageUrl, contentDescription = "Book Cover", modifier = Modifier.width(80.dp).height(120.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
             Spacer(modifier = Modifier.width(16.dp))
             Column {
                 Text(text = book.title, style = MaterialTheme.typography.titleLarge)
@@ -187,9 +164,7 @@ suspend fun downloadPdf(context: android.content.Context, urlString: String, boo
             if (file.exists() && file.length() > 0) return@withContext file
             val url = URL(urlString)
             val connection = url.openConnection().apply { connect() }
-            connection.getInputStream().use { input ->
-                FileOutputStream(file).use { output -> input.copyTo(output) }
-            }
+            connection.getInputStream().use { input -> FileOutputStream(file).use { output -> input.copyTo(output) } }
             file
         } catch (e: Exception) {
             e.printStackTrace()

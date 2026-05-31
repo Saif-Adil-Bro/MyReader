@@ -25,17 +25,17 @@ import com.premium.myreader.ui.HomeScreen
 import com.premium.myreader.ui.PdfReaderScreen
 import com.premium.myreader.ui.ProfileScreen
 import com.premium.myreader.ui.AddBookScreen
-import com.premium.myreader.ui.SplashScreen // স্প্ল্যাশ স্ক্রিনের ইমপোর্ট
+import com.premium.myreader.ui.SplashScreen
 import java.io.File
 import dagger.hilt.android.AndroidEntryPoint
 
 sealed class Screen {
-    object Splash : Screen() // নতুন স্প্ল্যাশ স্ক্রিন
+    object Splash : Screen()
     object Login : Screen()
     object Home : Screen()
     object Profile : Screen() 
     object AddBook : Screen()
-    data class Reader(val file: File) : Screen()
+    data class Reader(val file: File, val title: String) : Screen() // নতুন: টাইটেল হোল্ড করবে
 }
 
 @AndroidEntryPoint
@@ -44,22 +44,20 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             MyReaderTheme {
-                // অ্যাপ শুরুতেই Splash স্ক্রিনে থাকবে
                 var currentScreen by remember { mutableStateOf<Screen>(Screen.Splash) }
 
                 when (val screen = currentScreen) {
                     is Screen.Splash -> {
-                        SplashScreen(
-                            onNavigateToHome = { currentScreen = Screen.Home },
-                            onNavigateToLogin = { currentScreen = Screen.Login }
-                        )
+                        SplashScreen(onNavigateToHome = { currentScreen = Screen.Home }, onNavigateToLogin = { currentScreen = Screen.Login })
                     }
                     is Screen.Login -> {
                         LoginScreen(onLoginSuccess = { currentScreen = Screen.Home })
                     }
                     is Screen.Home -> {
                         HomeScreen(
-                            onBookClick = { downloadedFile -> currentScreen = Screen.Reader(downloadedFile) },
+                            onBookClick = { downloadedFile, bookTitle -> // নতুন: টাইটেল সহ পাঠাবে
+                                currentScreen = Screen.Reader(downloadedFile, bookTitle) 
+                            },
                             onProfileClick = { currentScreen = Screen.Profile },
                             onAddBookClick = { currentScreen = Screen.AddBook }
                         )
@@ -70,15 +68,13 @@ class MainActivity : ComponentActivity() {
                     }
                     is Screen.Profile -> {
                         BackHandler { currentScreen = Screen.Home }
-                        ProfileScreen(
-                            onBackClick = { currentScreen = Screen.Home },
-                            onLogout = { currentScreen = Screen.Login }
-                        )
+                        ProfileScreen(onBackClick = { currentScreen = Screen.Home }, onLogout = { currentScreen = Screen.Login })
                     }
                     is Screen.Reader -> {
                         BackHandler { currentScreen = Screen.Home }
                         PdfReaderScreen(
                             file = screen.file, 
+                            title = screen.title, // নতুন: টাইটেল রিডার পেজে পাস করছে
                             onBackClick = { currentScreen = Screen.Home }
                         )
                     }

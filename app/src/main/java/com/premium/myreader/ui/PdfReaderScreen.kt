@@ -1,5 +1,6 @@
 package com.premium.myreader.ui
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
@@ -7,6 +8,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -18,6 +20,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -25,8 +28,15 @@ import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PdfReaderScreen(file: File, onBackClick: () -> Unit) { 
+fun PdfReaderScreen(file: File, title: String, onBackClick: () -> Unit) { // নতুন: title যুক্ত করা হয়েছে
     var pdfRenderer by remember { mutableStateOf<PdfRenderer?>(null) }
+    
+    val context = LocalContext.current
+    val sharedPreferences = remember { context.getSharedPreferences("MyReaderPrefs", Context.MODE_PRIVATE) }
+    val bookKey = "last_page_${file.name}" 
+    
+    val savedPage = remember { sharedPreferences.getInt(bookKey, 0) }
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = savedPage)
     
     DisposableEffect(file) {
         val fileDescriptor = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
@@ -37,13 +47,16 @@ fun PdfReaderScreen(file: File, onBackClick: () -> Unit) {
         }
     }
 
-    // প্রিমিয়াম UI এর জন্য Scaffold ব্যবহার
+    LaunchedEffect(listState.firstVisibleItemIndex) {
+        sharedPreferences.edit().putInt(bookKey, listState.firstVisibleItemIndex).apply()
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(file.nameWithoutExtension, maxLines = 1) },
+                title = { Text(title, maxLines = 1) }, // নতুন: ফাইলের নামের বদলে আসল টাইটেল দেখাবে
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) { // ব্যাক বাটন
+                    IconButton(onClick = onBackClick) { 
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
@@ -54,19 +67,18 @@ fun PdfReaderScreen(file: File, onBackClick: () -> Unit) {
                 )
             )
         },
-        containerColor = Color(0xFFECEFF1) // হালকা ছাই রঙের ব্যাকগ্রাউন্ড (যাতে পাতাগুলো ভাসে)
+        containerColor = Color(0xFFECEFF1)
     ) { paddingValues ->
         pdfRenderer?.let { renderer ->
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
+                state = listState,
+                modifier = Modifier.fillMaxSize().padding(paddingValues),
                 contentPadding = PaddingValues(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 items(renderer.pageCount) { index ->
                     PdfPage(renderer = renderer, pageIndex = index)
-                    Spacer(modifier = Modifier.height(24.dp)) // প্রতি পৃষ্ঠার মাঝে সুন্দর গ্যাপ
+                    Spacer(modifier = Modifier.height(24.dp))
                 }
             }
         } ?: Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -79,7 +91,6 @@ fun PdfReaderScreen(file: File, onBackClick: () -> Unit) {
 fun PdfPage(renderer: PdfRenderer, pageIndex: Int) {
     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
 
-    // স্ক্রল করে চলে গেলে মেমোরি ক্লিয়ার করার কোড (OOM Error থেকে বাঁচতে)
     DisposableEffect(pageIndex) {
         onDispose {
             bitmap?.recycle()
@@ -88,18 +99,13 @@ fun PdfPage(renderer: PdfRenderer, pageIndex: Int) {
     }
 
     LaunchedEffect(pageIndex) {
-        withContext(Dispatchers.IO) { // ব্যাকগ্রাউন্ড থ্রেডে রেন্ডার হবে (ল্যাগ হবে না)
+        withContext(Dispatchers.IO) { 
             try {
                 val page = renderer.openPage(pageIndex)
-                val scale = 2f // রেজ্যুলেশন স্কেল
-                val renderedBitmap = Bitmap.createBitmap(
-                    (page.width * scale).toInt(),
-                    (page.height * scale).toInt(),
-                    Bitmap.Config.ARGB_8888
-                )
-                renderedBitmap.eraseColor(android.graphics.Color.WHITE) // ব্যাকগ্রাউন্ড সাদা করা
+                val scale = 2f 
+                val renderedBitmap = Bitmap.createBitmap((page.width * scale).toInt(), (page.height * scale).toInt(), Bitmap.Config.ARGB_8888)
+                renderedBitmap.eraseColor(android.graphics.Color.WHITE) 
                 page.render(renderedBitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                
                 bitmap = renderedBitmap
                 page.close()
             } catch (e: Exception) {
@@ -108,22 +114,12 @@ fun PdfPage(renderer: PdfRenderer, pageIndex: Int) {
         }
     }
 
-    // পাতার প্রফেশনাল ডিজাইন (Shadow ও Loading অ্যানিমেশন)
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(0.7f) // স্ট্যান্ডার্ড বইয়ের শেপ
-            .shadow(8.dp, RoundedCornerShape(8.dp)) // পাতার নিচে হালকা শ্যাডো
-            .clip(RoundedCornerShape(8.dp))
-            .background(Color.White),
+        modifier = Modifier.fillMaxWidth().aspectRatio(0.7f).shadow(8.dp, RoundedCornerShape(8.dp)).clip(RoundedCornerShape(8.dp)).background(Color.White),
         contentAlignment = Alignment.Center
     ) {
         bitmap?.let { b ->
-            Image(
-                bitmap = b.asImageBitmap(),
-                contentDescription = "Page $pageIndex",
-                modifier = Modifier.fillMaxSize()
-            )
-        } ?: CircularProgressIndicator(color = MaterialTheme.colorScheme.primary) // লোড হওয়ার সময় স্পিনার দেখাবে
+            Image(bitmap = b.asImageBitmap(), contentDescription = "Page $pageIndex", modifier = Modifier.fillMaxSize())
+        } ?: CircularProgressIndicator(color = MaterialTheme.colorScheme.primary) 
     }
 }
