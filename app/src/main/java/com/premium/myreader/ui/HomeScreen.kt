@@ -1,5 +1,6 @@
 package com.premium.myreader.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -10,16 +11,28 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.google.firebase.firestore.FirebaseFirestore
 import com.premium.myreader.data.Book
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
+import java.net.URL
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen() {
+fun HomeScreen(onBookClick: (File) -> Unit) {
     var books by remember { mutableStateOf<List<Book>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
+    
+    // ডাউনলোডের স্টেট ম্যানেজ করার জন্য
+    var isDownloading by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         val db = FirebaseFirestore.getInstance()
@@ -60,7 +73,34 @@ fun HomeScreen() {
             } else {
                 LazyColumn(contentPadding = PaddingValues(16.dp)) {
                     items(books) { book ->
-                        BookCard(book)
+                        BookCard(book = book, onClick = {
+                            if (book.fileUrl.isNotEmpty()) {
+                                isDownloading = true
+                                coroutineScope.launch {
+                                    val downloadedFile = downloadPdf(context, book.fileUrl, book.id)
+                                    isDownloading = false
+                                    if (downloadedFile != null) {
+                                        onBookClick(downloadedFile) // ফাইল রিডারে পাঠাবে
+                                    }
+                                }
+                            }
+                        })
+                    }
+                }
+            }
+
+            // ডাউনলোডের সময় স্ক্রিনের ওপর লোডিং দেখাবে
+            if (isDownloading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Card(elevation = CardDefaults.cardElevation(8.dp)) {
+                        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator()
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Text("Downloading Book...")
+                        }
                     }
                 }
             }
@@ -69,15 +109,15 @@ fun HomeScreen() {
 }
 
 @Composable
-fun BookCard(book: Book) {
+fun BookCard(book: Book, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 16.dp),
+            .padding(bottom = 16.dp)
+            .clickable { onClick() }, // ক্লিক অপশন যুক্ত করা হলো
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Row(modifier = Modifier.padding(16.dp)) {
-            // Coil লাইব্রেরি দিয়ে গুগল ড্রাইভের ছবি লোড করা
             AsyncImage(
                 model = book.coverImageUrl,
                 contentDescription = "Book Cover",
@@ -101,6 +141,38 @@ fun BookCard(book: Book) {
                     color = MaterialTheme.colorScheme.primary
                 )
             }
+        }
+    }
+}
+
+// পিডিএফ ডাউনলোড এবং অফলাইনে সেভ করার ফাংশন
+suspend fun downloadPdf(context: android.content.Context, urlString: String, bookId: String): File? {
+    return withContext(Dispatchers.IO) {
+        try {
+            // ফোনের Cache ফোল্ডারে সেভ করবে যাতে পারমিশন না লাগে
+            val file = File(context.cacheDir, "$bookId.pdf")
+            
+            // যদি আগে থেকেই ডাউনলোড করা থাকে, তবে সরাসরি ওপেন করবে (অফলাইন মোড)
+            if (file.exists() && file.length() > 0) {
+                return@withContext file
+            }
+            
+            val url = URL(urlString)
+            val connection = url.openConnection()
+            connection.connect()
+
+            val input = connection.getInputStream()
+            val output = FileOutputStream(file)
+
+            input.use { input ->
+                output.use { output ->
+                    input.copyTo(output)
+                }
+            }
+            file
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
         }
     }
 }

@@ -3,6 +3,7 @@ package com.premium.myreader
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -11,7 +12,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.premium.myreader.ui.theme.MyReaderTheme
 import com.premium.myreader.ui.HomeScreen
+import com.premium.myreader.ui.screens.PdfReaderScreen
+import java.io.File
 import dagger.hilt.android.AndroidEntryPoint
+
+// স্ক্রিনগুলো ম্যানেজ করার জন্য State
+sealed class Screen {
+    object Login : Screen()
+    object Home : Screen()
+    data class Reader(val file: File) : Screen()
+}
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -19,12 +29,24 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             MyReaderTheme {
-                var showHome by remember { mutableStateOf(false) }
+                var currentScreen by remember { mutableStateOf<Screen>(Screen.Login) }
 
-                if (showHome) {
-                    HomeScreen() // হোম স্ক্রিন দেখাবে
-                } else {
-                    LoginScreen(onLoginSuccess = { showHome = true }) // লগ-ইন স্ক্রিন দেখাবে
+                when (val screen = currentScreen) {
+                    is Screen.Login -> {
+                        LoginScreen(onLoginSuccess = { currentScreen = Screen.Home })
+                    }
+                    is Screen.Home -> {
+                        HomeScreen(onBookClick = { downloadedFile ->
+                            currentScreen = Screen.Reader(downloadedFile)
+                        })
+                    }
+                    is Screen.Reader -> {
+                        // রিডার স্ক্রিন থেকে ব্যাক বাটনে চাপলে হোমে ফিরে আসবে
+                        BackHandler {
+                            currentScreen = Screen.Home
+                        }
+                        PdfReaderScreen(file = screen.file)
+                    }
                 }
             }
         }
@@ -41,7 +63,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
         Text("My Reader", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.primary)
         Spacer(modifier = Modifier.height(48.dp))
         Button(
-            onClick = onLoginSuccess, // বাটনে ক্লিক করলে হোম স্ক্রিনে যাবে
+            onClick = onLoginSuccess,
             modifier = Modifier.fillMaxWidth().height(50.dp)
         ) {
             Text("Enter App")
