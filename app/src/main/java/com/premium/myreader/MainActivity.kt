@@ -23,15 +23,16 @@ import com.google.firebase.auth.FirebaseAuth
 import com.premium.myreader.ui.theme.MyReaderTheme
 import com.premium.myreader.ui.HomeScreen
 import com.premium.myreader.ui.PdfReaderScreen
-import com.premium.myreader.ui.ProfileScreen // প্রোফাইলের ইমপোর্ট
+import com.premium.myreader.ui.ProfileScreen
+import com.premium.myreader.ui.AddBookScreen // অ্যাডমিন স্ক্রিনের ইমপোর্ট
 import java.io.File
 import dagger.hilt.android.AndroidEntryPoint
 
-// প্রোফাইল স্ক্রিন যুক্ত করা হলো
 sealed class Screen {
     object Login : Screen()
     object Home : Screen()
     object Profile : Screen() 
+    object AddBook : Screen() // নতুন অ্যাডমিন স্ক্রিন যুক্ত হলো
     data class Reader(val file: File) : Screen()
 }
 
@@ -60,15 +61,22 @@ class MainActivity : ComponentActivity() {
                                 currentScreen = Screen.Reader(downloadedFile)
                             },
                             onProfileClick = {
-                                currentScreen = Screen.Profile // প্রোফাইল বাটনে চাপলে এখানে আসবে
+                                currentScreen = Screen.Profile
+                            },
+                            onAddBookClick = {
+                                currentScreen = Screen.AddBook // প্লাস বাটনে চাপলে অ্যাডমিন প্যানেলে যাবে
                             }
                         )
+                    }
+                    is Screen.AddBook -> {
+                        BackHandler { currentScreen = Screen.Home }
+                        AddBookScreen(onBackClick = { currentScreen = Screen.Home })
                     }
                     is Screen.Profile -> {
                         BackHandler { currentScreen = Screen.Home }
                         ProfileScreen(
                             onBackClick = { currentScreen = Screen.Home },
-                            onLogout = { currentScreen = Screen.Login } // লগ-আউট করলে লগ-ইন পেজে যাবে
+                            onLogout = { currentScreen = Screen.Login }
                         )
                     }
                     is Screen.Reader -> {
@@ -101,35 +109,22 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text("My Reader", style = MaterialTheme.typography.displaySmall, color = MaterialTheme.colorScheme.primary)
-        Text(
-            text = if (isSignUpMode) "Create a new account" else "Login to your account",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Text(text = if (isSignUpMode) "Create a new account" else "Login to your account", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(modifier = Modifier.height(32.dp))
 
         OutlinedTextField(
-            value = email,
-            onValueChange = { email = it },
-            label = { Text("Email") },
-            leadingIcon = { Icon(Icons.Default.Email, contentDescription = "Email") },
+            value = email, onValueChange = { email = it },
+            label = { Text("Email") }, leadingIcon = { Icon(Icons.Default.Email, contentDescription = "Email") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            singleLine = true
+            modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), singleLine = true
         )
         Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
-            label = { Text("Password") },
-            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Password") },
-            visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            singleLine = true
+            value = password, onValueChange = { password = it },
+            label = { Text("Password") }, leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Password") },
+            visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), singleLine = true
         )
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -154,9 +149,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                     }
                 } else Toast.makeText(context, "Please enter email and password", Toast.LENGTH_SHORT).show()
             },
-            modifier = Modifier.fillMaxWidth().height(50.dp),
-            shape = RoundedCornerShape(12.dp),
-            enabled = !isLoading
+            modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(12.dp), enabled = !isLoading
         ) {
             if (isLoading) CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(24.dp))
             else Text(if (isSignUpMode) "Sign Up" else "Login")
@@ -177,9 +170,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                     else Toast.makeText(context, task.exception?.message, Toast.LENGTH_LONG).show()
                 }
             },
-            modifier = Modifier.fillMaxWidth().height(50.dp),
-            shape = RoundedCornerShape(12.dp),
-            enabled = !isLoading
+            modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(12.dp), enabled = !isLoading
         ) {
             Text("Continue as Guest")
         }

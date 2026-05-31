@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -17,6 +18,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.premium.myreader.data.Book
 import kotlinx.coroutines.Dispatchers
@@ -28,36 +30,42 @@ import java.net.URL
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(onBookClick: (File) -> Unit, onProfileClick: () -> Unit) { // নতুন অপশন onProfileClick
+fun HomeScreen(onBookClick: (File) -> Unit, onProfileClick: () -> Unit, onAddBookClick: () -> Unit) { 
     var books by remember { mutableStateOf<List<Book>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var searchQuery by remember { mutableStateOf("") }
     var isDownloading by remember { mutableStateOf(false) }
+    
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    
+    // অ্যাডমিন চেক করা
+    val auth = FirebaseAuth.getInstance()
+    val isAdmin = auth.currentUser?.email == "Rafuse2024@gmail.com"
 
     LaunchedEffect(Unit) {
         val db = FirebaseFirestore.getInstance()
-        db.collection("books").get()
-            .addOnSuccessListener { result ->
-                val list = mutableListOf<Book>()
-                for (document in result) {
-                    val book = Book(
-                        id = document.id,
-                        title = document.getString("title") ?: "Unknown Title",
-                        author = document.getString("author") ?: "Unknown Author",
-                        category = document.getString("category") ?: "Uncategorized",
-                        coverImageUrl = document.getString("coverImageUrl") ?: "",
-                        fileUrl = document.getString("fileUrl") ?: ""
-                    )
-                    list.add(book)
-                }
-                books = list
+        // রিয়েলটাইমে ডাটা আনার জন্য snapshot listener ব্যবহার করা হলো (যাতে নতুন বই দিলে সাথে সাথে দেখায়)
+        db.collection("books").addSnapshotListener { snapshot, e ->
+            if (e != null || snapshot == null) {
                 isLoading = false
+                return@addSnapshotListener
             }
-            .addOnFailureListener {
-                isLoading = false
+            val list = mutableListOf<Book>()
+            for (document in snapshot.documents) {
+                val book = Book(
+                    id = document.id,
+                    title = document.getString("title") ?: "Unknown Title",
+                    author = document.getString("author") ?: "Unknown Author",
+                    category = document.getString("category") ?: "Uncategorized",
+                    coverImageUrl = document.getString("coverImageUrl") ?: "",
+                    fileUrl = document.getString("fileUrl") ?: ""
+                )
+                list.add(book)
             }
+            books = list
+            isLoading = false
+        }
     }
 
     val filteredBooks = books.filter { book ->
@@ -71,17 +79,23 @@ fun HomeScreen(onBookClick: (File) -> Unit, onProfileClick: () -> Unit) { // ন
             TopAppBar(
                 title = { Text("My Library", color = MaterialTheme.colorScheme.primary) },
                 actions = {
-                    // নতুন: প্রোফাইল আইকন
                     IconButton(onClick = onProfileClick) {
-                        Icon(
-                            imageVector = Icons.Default.AccountCircle, 
-                            contentDescription = "Profile", 
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(28.dp)
-                        )
+                        Icon(Icons.Default.AccountCircle, contentDescription = "Profile", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
                     }
                 }
             )
+        },
+        // শুধুমাত্র অ্যাডমিনের জন্য ফ্লোটিং বাটন দেখাবে
+        floatingActionButton = {
+            if (isAdmin) {
+                FloatingActionButton(
+                    onClick = onAddBookClick,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Add Book")
+                }
+            }
         }
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
@@ -89,9 +103,7 @@ fun HomeScreen(onBookClick: (File) -> Unit, onProfileClick: () -> Unit) { // ন
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                     placeholder = { Text("Search by title, author or category...") },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search Icon") },
                     shape = RoundedCornerShape(12.dp),
@@ -112,7 +124,7 @@ fun HomeScreen(onBookClick: (File) -> Unit, onProfileClick: () -> Unit) { // ন
                     }
                 } else {
                     LazyColumn(
-                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp, top = 8.dp),
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp, top = 8.dp),
                         modifier = Modifier.fillMaxSize()
                     ) {
                         items(filteredBooks) { book ->
@@ -122,9 +134,7 @@ fun HomeScreen(onBookClick: (File) -> Unit, onProfileClick: () -> Unit) { // ন
                                     coroutineScope.launch {
                                         val downloadedFile = downloadPdf(context, book.fileUrl, book.id)
                                         isDownloading = false
-                                        if (downloadedFile != null) {
-                                            onBookClick(downloadedFile)
-                                        }
+                                        if (downloadedFile != null) onBookClick(downloadedFile)
                                     }
                                 }
                             })
@@ -151,20 +161,13 @@ fun HomeScreen(onBookClick: (File) -> Unit, onProfileClick: () -> Unit) { // ন
 @Composable
 fun BookCard(book: Book, onClick: () -> Unit) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 16.dp)
-            .clickable { onClick() },
+        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp).clickable { onClick() },
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Row(modifier = Modifier.padding(16.dp)) {
             AsyncImage(
-                model = book.coverImageUrl,
-                contentDescription = "Book Cover",
-                modifier = Modifier
-                    .width(80.dp)
-                    .height(120.dp)
-                    .clip(RoundedCornerShape(8.dp)),
+                model = book.coverImageUrl, contentDescription = "Book Cover",
+                modifier = Modifier.width(80.dp).height(120.dp).clip(RoundedCornerShape(8.dp)),
                 contentScale = ContentScale.Crop
             )
             Spacer(modifier = Modifier.width(16.dp))
@@ -173,11 +176,7 @@ fun BookCard(book: Book, onClick: () -> Unit) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(text = "Author: ${book.author}", style = MaterialTheme.typography.bodyMedium)
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Category: ${book.category}", 
-                    style = MaterialTheme.typography.labelMedium, 
-                    color = MaterialTheme.colorScheme.primary
-                )
+                Text(text = "Category: ${book.category}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             }
         }
     }
