@@ -40,23 +40,23 @@ fun HomeScreen(
     onBookClick: (File, String) -> Unit, 
     onProfileClick: () -> Unit, 
     onAddBookClick: () -> Unit,
-    onEditBookClick: (Book) -> Unit // নতুন: এডিট স্ক্রিনে যাওয়ার জন্য
+    onEditBookClick: (Book) -> Unit 
 ) {
     var books by remember { mutableStateOf<List<Book>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var searchQuery by remember { mutableStateOf("") }
     var isDownloading by remember { mutableStateOf(false) }
     var showFavoritesOnly by remember { mutableStateOf(false) }
-    
-    // নতুন: ডিলিট অ্যালার্ট দেখানোর জন্য
     var bookToDelete by remember { mutableStateOf<Book?>(null) } 
+    
+    // নতুন: isAdmin স্টেট তৈরি করা হলো
+    var isAdmin by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val db = FirebaseFirestore.getInstance()
-
     val auth = FirebaseAuth.getInstance()
-    val isAdmin = auth.currentUser?.email?.equals("rafuse2024@gmail.com", ignoreCase = true) == true
+    val currentUser = auth.currentUser
 
     val sharedPreferences = remember { context.getSharedPreferences("MyReaderPrefs", Context.MODE_PRIVATE) }
     var favoriteBookIds by remember { mutableStateOf(sharedPreferences.getStringSet("favorites", emptySet()) ?: emptySet()) }
@@ -69,6 +69,15 @@ fun HomeScreen(
     }
 
     LaunchedEffect(Unit) {
+        // নতুন: ইউজারের রোল চেক করা হচ্ছে
+        if (currentUser != null) {
+            db.collection("users").document(currentUser.uid).get().addOnSuccessListener { document ->
+                if (document != null && document.getString("role") == "admin") {
+                    isAdmin = true
+                }
+            }
+        }
+
         db.collection("books").addSnapshotListener { snapshot, e ->
             if (e != null || snapshot == null) {
                 isLoading = false
@@ -97,7 +106,6 @@ fun HomeScreen(
         matchesSearch && matchesTab
     }
 
-    // নতুন: ডিলিট কনফার্মেশন পপ-আপ
     if (bookToDelete != null) {
         AlertDialog(
             onDismissRequest = { bookToDelete = null },
@@ -163,10 +171,10 @@ fun HomeScreen(
                             BookCard(
                                 book = book, 
                                 isFavorite = isFav,
-                                isAdmin = isAdmin, // অ্যাডমিন কি না তা পাস করা হচ্ছে
+                                isAdmin = isAdmin, 
                                 onFavoriteClick = { toggleFavorite(book.id) },
-                                onEditClick = { onEditBookClick(book) },     // এডিট ক্লিক
-                                onDeleteClick = { bookToDelete = book },     // ডিলিট ক্লিক
+                                onEditClick = { onEditBookClick(book) },     
+                                onDeleteClick = { bookToDelete = book },     
                                 onClick = {
                                     if (book.fileUrl.isNotEmpty()) {
                                         isDownloading = true
@@ -229,14 +237,13 @@ fun BookCard(
                         tint = if (isFavorite) Color.Red else Color.Gray
                     )
                 }
-                // নতুন: অ্যাডমিন হলে এডিট এবং ডিলিট আইকন দেখাবে
                 if (isAdmin) {
                     Row {
                         IconButton(onClick = onEditClick) {
-                            Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color(0xFF1976D2)) // নীল রঙ
+                            Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color(0xFF1976D2)) 
                         }
                         IconButton(onClick = onDeleteClick) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color(0xFFD32F2F)) // লাল রঙ
+                            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color(0xFFD32F2F)) 
                         }
                     }
                 }
