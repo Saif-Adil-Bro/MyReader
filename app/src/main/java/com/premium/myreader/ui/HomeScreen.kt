@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,7 +31,9 @@ fun HomeScreen(onBookClick: (File) -> Unit) {
     var books by remember { mutableStateOf<List<Book>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     
-    // ডাউনলোডের স্টেট ম্যানেজ করার জন্য
+    // নতুন: সার্চের জন্য State
+    var searchQuery by remember { mutableStateOf("") }
+    
     var isDownloading by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -58,6 +62,13 @@ fun HomeScreen(onBookClick: (File) -> Unit) {
             }
     }
 
+    // নতুন: সার্চ কোয়েরি অনুযায়ী বই ফিল্টার করা
+    val filteredBooks = books.filter { book ->
+        book.title.contains(searchQuery, ignoreCase = true) || 
+        book.author.contains(searchQuery, ignoreCase = true) ||
+        book.category.contains(searchQuery, ignoreCase = true)
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -66,30 +77,57 @@ fun HomeScreen(onBookClick: (File) -> Unit) {
         }
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-            if (isLoading) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-            } else if (books.isEmpty()) {
-                Text("No books available.", modifier = Modifier.align(Alignment.Center))
-            } else {
-                LazyColumn(contentPadding = PaddingValues(16.dp)) {
-                    items(books) { book ->
-                        BookCard(book = book, onClick = {
-                            if (book.fileUrl.isNotEmpty()) {
-                                isDownloading = true
-                                coroutineScope.launch {
-                                    val downloadedFile = downloadPdf(context, book.fileUrl, book.id)
-                                    isDownloading = false
-                                    if (downloadedFile != null) {
-                                        onBookClick(downloadedFile) // ফাইল রিডারে পাঠাবে
+            Column(modifier = Modifier.fillMaxSize()) {
+                
+                // নতুন: সার্চ বার UI
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    placeholder = { Text("Search by title, author or category...") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search Icon") },
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true,
+                    colors = TextFieldDefaults.outlinedTextFieldColors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                    )
+                )
+
+                if (isLoading) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                } else if (filteredBooks.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(if (books.isEmpty()) "No books available." else "No books found matching your search.")
+                    }
+                } else {
+                    LazyColumn(
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp, top = 8.dp),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        items(filteredBooks) { book ->
+                            BookCard(book = book, onClick = {
+                                if (book.fileUrl.isNotEmpty()) {
+                                    isDownloading = true
+                                    coroutineScope.launch {
+                                        val downloadedFile = downloadPdf(context, book.fileUrl, book.id)
+                                        isDownloading = false
+                                        if (downloadedFile != null) {
+                                            onBookClick(downloadedFile)
+                                        }
                                     }
                                 }
-                            }
-                        })
+                            })
+                        }
                     }
                 }
             }
 
-            // ডাউনলোডের সময় স্ক্রিনের ওপর লোডিং দেখাবে
+            // ডাউনলোডের সময় লোডিং ইন্ডিকেটর
             if (isDownloading) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -114,7 +152,7 @@ fun BookCard(book: Book, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 16.dp)
-            .clickable { onClick() }, // ক্লিক অপশন যুক্ত করা হলো
+            .clickable { onClick() },
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Row(modifier = Modifier.padding(16.dp)) {
@@ -145,18 +183,13 @@ fun BookCard(book: Book, onClick: () -> Unit) {
     }
 }
 
-// পিডিএফ ডাউনলোড এবং অফলাইনে সেভ করার ফাংশন
 suspend fun downloadPdf(context: android.content.Context, urlString: String, bookId: String): File? {
     return withContext(Dispatchers.IO) {
         try {
-            // ফোনের Cache ফোল্ডারে সেভ করবে যাতে পারমিশন না লাগে
             val file = File(context.cacheDir, "$bookId.pdf")
-            
-            // যদি আগে থেকেই ডাউনলোড করা থাকে, তবে সরাসরি ওপেন করবে (অফলাইন মোড)
             if (file.exists() && file.length() > 0) {
                 return@withContext file
             }
-            
             val url = URL(urlString)
             val connection = url.openConnection()
             connection.connect()
