@@ -1,10 +1,12 @@
 package com.premium.myreader.ui
 
 import android.content.Context
+import android.content.Intent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,7 +36,20 @@ fun BookDetailsScreen(book: Book, onBackClick: () -> Unit, onReadClick: (File, S
         topBar = {
             TopAppBar(
                 title = { Text("Book Details") },
-                navigationIcon = { IconButton(onClick = onBackClick) { Icon(Icons.Default.ArrowBack, "Back") } }
+                navigationIcon = { IconButton(onClick = onBackClick) { Icon(Icons.Default.ArrowBack, "Back") } },
+                actions = {
+                    // নতুন: নির্দিষ্ট বই শেয়ার করার আইকন
+                    IconButton(onClick = {
+                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_SUBJECT, "Check out this amazing book!")
+                            putExtra(Intent.EXTRA_TEXT, "Hey! I am reading '${book.title}' by ${book.author} on My Reader app. Download the app to read it for free: https://play.google.com/store/apps/details?id=${context.packageName}")
+                        }
+                        context.startActivity(Intent.createChooser(shareIntent, "Share Book"))
+                    }) {
+                        Icon(Icons.Default.Share, contentDescription = "Share Book")
+                    }
+                }
             )
         }
     ) { padding ->
