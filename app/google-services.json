@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "799165643788",
+    "project_id": "my-reader-354d5",
+    "storage_bucket": "my-reader-354d5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:799165643788:android:06d9be112f77b23772c229",
+        "android_client_info": {
+          "package_name": "com.premium.myreader"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDC_oLl_KNzdGJjeo-4MW5RpPRfbxU5OTE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
