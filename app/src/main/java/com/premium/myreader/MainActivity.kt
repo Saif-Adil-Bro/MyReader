@@ -24,15 +24,17 @@ import com.premium.myreader.ui.theme.MyReaderTheme
 import com.premium.myreader.ui.HomeScreen
 import com.premium.myreader.ui.PdfReaderScreen
 import com.premium.myreader.ui.ProfileScreen
-import com.premium.myreader.ui.AddBookScreen // অ্যাডমিন স্ক্রিনের ইমপোর্ট
+import com.premium.myreader.ui.AddBookScreen
+import com.premium.myreader.ui.SplashScreen // স্প্ল্যাশ স্ক্রিনের ইমপোর্ট
 import java.io.File
 import dagger.hilt.android.AndroidEntryPoint
 
 sealed class Screen {
+    object Splash : Screen() // নতুন স্প্ল্যাশ স্ক্রিন
     object Login : Screen()
     object Home : Screen()
     object Profile : Screen() 
-    object AddBook : Screen() // নতুন অ্যাডমিন স্ক্রিন যুক্ত হলো
+    object AddBook : Screen()
     data class Reader(val file: File) : Screen()
 }
 
@@ -42,30 +44,24 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             MyReaderTheme {
-                var currentScreen by remember { mutableStateOf<Screen>(Screen.Login) }
-                val auth = FirebaseAuth.getInstance()
-
-                LaunchedEffect(Unit) {
-                    if (auth.currentUser != null) {
-                        currentScreen = Screen.Home
-                    }
-                }
+                // অ্যাপ শুরুতেই Splash স্ক্রিনে থাকবে
+                var currentScreen by remember { mutableStateOf<Screen>(Screen.Splash) }
 
                 when (val screen = currentScreen) {
+                    is Screen.Splash -> {
+                        SplashScreen(
+                            onNavigateToHome = { currentScreen = Screen.Home },
+                            onNavigateToLogin = { currentScreen = Screen.Login }
+                        )
+                    }
                     is Screen.Login -> {
                         LoginScreen(onLoginSuccess = { currentScreen = Screen.Home })
                     }
                     is Screen.Home -> {
                         HomeScreen(
-                            onBookClick = { downloadedFile ->
-                                currentScreen = Screen.Reader(downloadedFile)
-                            },
-                            onProfileClick = {
-                                currentScreen = Screen.Profile
-                            },
-                            onAddBookClick = {
-                                currentScreen = Screen.AddBook // প্লাস বাটনে চাপলে অ্যাডমিন প্যানেলে যাবে
-                            }
+                            onBookClick = { downloadedFile -> currentScreen = Screen.Reader(downloadedFile) },
+                            onProfileClick = { currentScreen = Screen.Profile },
+                            onAddBookClick = { currentScreen = Screen.AddBook }
                         )
                     }
                     is Screen.AddBook -> {
@@ -99,7 +95,6 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
     var password by remember { mutableStateOf("") }
     var isSignUpMode by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
-    
     val auth = FirebaseAuth.getInstance()
     val context = LocalContext.current
 
@@ -113,16 +108,16 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
         Spacer(modifier = Modifier.height(32.dp))
 
         OutlinedTextField(
-            value = email, onValueChange = { email = it },
-            label = { Text("Email") }, leadingIcon = { Icon(Icons.Default.Email, contentDescription = "Email") },
+            value = email, onValueChange = { email = it }, label = { Text("Email") },
+            leadingIcon = { Icon(Icons.Default.Email, contentDescription = "Email") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), singleLine = true
         )
         Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedTextField(
-            value = password, onValueChange = { password = it },
-            label = { Text("Password") }, leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Password") },
+            value = password, onValueChange = { password = it }, label = { Text("Password") },
+            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Password") },
             visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), singleLine = true
         )
