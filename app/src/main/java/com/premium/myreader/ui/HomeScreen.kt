@@ -39,13 +39,12 @@ fun HomeScreen(onBookClick: (File) -> Unit, onProfileClick: () -> Unit, onAddBoo
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     
-    // অ্যাডমিন চেক করা
+    // অ্যাডমিন চেক ফিক্স করা হলো (ছোট/বড় হাতের অক্ষর যাই হোক না কেন কাজ করবে)
     val auth = FirebaseAuth.getInstance()
-    val isAdmin = auth.currentUser?.email == "Rafuse2024@gmail.com"
+    val isAdmin = auth.currentUser?.email?.equals("rafuse2024@gmail.com", ignoreCase = true) == true
 
     LaunchedEffect(Unit) {
         val db = FirebaseFirestore.getInstance()
-        // রিয়েলটাইমে ডাটা আনার জন্য snapshot listener ব্যবহার করা হলো (যাতে নতুন বই দিলে সাথে সাথে দেখায়)
         db.collection("books").addSnapshotListener { snapshot, e ->
             if (e != null || snapshot == null) {
                 isLoading = false
@@ -85,7 +84,6 @@ fun HomeScreen(onBookClick: (File) -> Unit, onProfileClick: () -> Unit, onAddBoo
                 }
             )
         },
-        // শুধুমাত্র অ্যাডমিনের জন্য ফ্লোটিং বাটন দেখাবে
         floatingActionButton = {
             if (isAdmin) {
                 FloatingActionButton(
