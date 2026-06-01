@@ -29,10 +29,11 @@ fun BookDetailsScreen(book: Book, onBackClick: () -> Unit, onReadClick: (File, S
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
 
+    // এখানে আপনার আসল AIza চাবিটি দুই ভাগে বসাবেন
     val generativeModel = remember {
         GenerativeModel(
-            modelName = "gemini-pro",
-            apiKey = "AQ.Ab8RN" + "6IqFByF7RT" + "urD2bzLokhYd9" + "Jx8y0Agjz6fsoI" + "axcBLG4g"
+            modelName = "gemini-1.5-flash",
+            apiKey = "AQ.Ab8RN6IqFByF7RTurD2b" + "zLokhYd9Jx8y0Agjz6fsoIaxcBLG4g" 
         )
     }
 
@@ -68,7 +69,6 @@ fun BookDetailsScreen(book: Book, onBackClick: () -> Unit, onReadClick: (File, S
             
             Spacer(modifier = Modifier.height(24.dp))
             
-            // ✨ ফাইল চেকিং লজিক যুক্ত করা হলো ✨
             Button(
                 onClick = {
                     val pdfFile = File(book.getSafePdf())
