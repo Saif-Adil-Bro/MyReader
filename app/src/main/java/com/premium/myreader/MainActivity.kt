@@ -121,7 +121,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                     db.collection("users").document(user!!.uid).set(hashMapOf("email" to user.email, "name" to user.displayName, "role" to "user")).addOnCompleteListener { onLoginSuccess() }
                 } else Toast.makeText(context, task.exception?.message, Toast.LENGTH_LONG).show()
             }
-        } catch (e: Exception) { isGoogleLoading = false; Toast.makeText(context, "Google Sign-In Cancelled", Toast.LENGTH_SHORT).show() }
+        } catch (e: Exception) { isGoogleLoading = false; Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show() }
     }
 
     Column(modifier = Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
