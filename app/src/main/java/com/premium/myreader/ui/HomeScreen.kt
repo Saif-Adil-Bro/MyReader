@@ -29,6 +29,10 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.premium.myreader.data.Book
 import java.io.File
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,6 +44,7 @@ fun HomeScreen(
 ) {
     var books by remember { mutableStateOf<List<Book>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
+    var isRefreshing by remember { mutableStateOf(false) } // নতুন স্টেট
     var searchQuery by remember { mutableStateOf("") }
     
     var selectedTabIndex by remember { mutableStateOf(0) } 
@@ -48,6 +53,7 @@ fun HomeScreen(
     var selectedCategory by remember { mutableStateOf("All") }
 
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val db = FirebaseFirestore.getInstance()
     val auth = FirebaseAuth.getInstance()
     val currentUser = auth.currentUser
@@ -62,31 +68,24 @@ fun HomeScreen(
         sharedPreferences.edit().putStringSet("favorites", newFavorites).apply()
     }
 
+    fun loadBooks() {
+        db.collection("books").get().addOnSuccessListener { snapshot ->
+            val list = mutableListOf<Book>()
+            for (document in snapshot.documents) {
+                list.add(Book(document.id, document.getString("title") ?: "", document.getString("author") ?: "", document.getString("category") ?: "", document.getString("coverImageUrl") ?: "", document.getString("fileUrl") ?: ""))
+            }
+            books = list
+            isLoading = false
+        }
+    }
+
     LaunchedEffect(Unit) {
         if (currentUser != null) {
             db.collection("users").document(currentUser.uid).get().addOnSuccessListener { document ->
                 if (document != null && document.getString("role") == "admin") isAdmin = true
             }
         }
-        db.collection("books").addSnapshotListener { snapshot, e ->
-            if (e != null || snapshot == null) { isLoading = false; return@addSnapshotListener }
-            val list = mutableListOf<Book>()
-            for (document in snapshot.documents) {
-                // ফিক্স: এখানে ভ্যারিয়েবলের নাম নির্দিষ্ট (Named argument) করে দেওয়া হলো যাতে উলটপালট না হয়
-                list.add(
-                    Book(
-                        id = document.id,
-                        title = document.getString("title") ?: "",
-                        author = document.getString("author") ?: "",
-                        category = document.getString("category") ?: "",
-                        coverImageUrl = document.getString("coverImageUrl") ?: "",
-                        fileUrl = document.getString("fileUrl") ?: ""
-                    )
-                )
-            }
-            books = list
-            isLoading = false
-        }
+        loadBooks()
     }
 
     val categories = listOf("All") + books.map { it.category }.filter { it.isNotBlank() }.distinct().sorted()
@@ -103,7 +102,7 @@ fun HomeScreen(
 
     if (bookToDelete != null) {
         AlertDialog(onDismissRequest = { bookToDelete = null }, title = { Text("Delete Book") }, text = { Text("Are you sure?") },
-            confirmButton = { TextButton(onClick = { db.collection("books").document(bookToDelete!!.id).delete(); bookToDelete = null }) { Text("Delete", color = MaterialTheme.colorScheme.error) } },
+            confirmButton = { TextButton(onClick = { db.collection("books").document(bookToDelete!!.id).delete(); loadBooks(); bookToDelete = null }) { Text("Delete", color = MaterialTheme.colorScheme.error) } },
             dismissButton = { TextButton(onClick = { bookToDelete = null }) { Text("Cancel") } }
         )
     }
@@ -126,9 +125,23 @@ fun HomeScreen(
             if (isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             } else {
-                LazyColumn(contentPadding = PaddingValues(16.dp), modifier = Modifier.fillMaxSize()) {
-                    items(filteredBooks) { book ->
-                        BookCard(book = book, isFavorite = favoriteBookIds.contains(book.id), isAdmin = isAdmin, onFavoriteClick = { toggleFavorite(book.id) }, onEditClick = { onEditBookClick(book) }, onDeleteClick = { bookToDelete = book }, onClick = { onBookClick(book) })
+                // ফিক্স: Swipe Refresh যুক্ত করা হলো
+                val swipeRefreshState = rememberSwipeRefreshState(isRefreshing)
+                SwipeRefresh(
+                    state = swipeRefreshState,
+                    onRefresh = {
+                        isRefreshing = true
+                        coroutineScope.launch {
+                            loadBooks() // ডাটাবেস থেকে আবার ডাটা আনবে
+                            delay(1000) // অ্যানিমেশন ১ সেকেন্ড দেখানোর জন্য
+                            isRefreshing = false
+                        }
+                    }
+                ) {
+                    LazyColumn(contentPadding = PaddingValues(16.dp), modifier = Modifier.fillMaxSize()) {
+                        items(filteredBooks) { book ->
+                            BookCard(book = book, isFavorite = favoriteBookIds.contains(book.id), isAdmin = isAdmin, onFavoriteClick = { toggleFavorite(book.id) }, onEditClick = { onEditBookClick(book) }, onDeleteClick = { bookToDelete = book }, onClick = { onBookClick(book) })
+                        }
                     }
                 }
             }
@@ -142,7 +155,6 @@ fun BookCard(book: Book, isFavorite: Boolean, isAdmin: Boolean, onFavoriteClick:
     val sharedPreferences = remember { context.getSharedPreferences("MyReaderPrefs", Context.MODE_PRIVATE) }
     val lastPage = sharedPreferences.getInt("last_page_${book.id}.pdf", 0)
     val totalPages = sharedPreferences.getInt("total_pages_${book.id}.pdf", 0)
-    
     val progress = if (totalPages > 1) lastPage.toFloat() / (totalPages - 1).toFloat() else 0f
     val percentage = if (totalPages > 1) ((progress * 100).toInt()).coerceIn(0, 100) else 0
 

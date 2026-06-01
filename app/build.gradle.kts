@@ -4,12 +4,21 @@ plugins {
     id("kotlin-kapt")
     id("com.google.dagger.hilt.android")
     id("com.google.gms.google-services")
-
 }
 
 android {
     namespace = "com.premium.myreader"
     compileSdk = 34
+
+    signingConfigs {
+        create("release") {
+            storeFile = file("myreader-release-key.jks")
+            storePassword = "myreader123"
+            keyAlias = "myreader"
+            keyPassword = "myreader123"
+        }
+    }
+
     defaultConfig {
         applicationId = "com.premium.myreader"
         minSdk = 26
@@ -25,6 +34,14 @@ android {
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true }
     composeOptions { kotlinCompilerExtensionVersion = "1.4.3" }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.getByName("release")
+        }
+    }
 }
 
 dependencies {
@@ -39,13 +56,15 @@ dependencies {
     implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.firebase:firebase-firestore-ktx")
     implementation("com.google.firebase:firebase-storage-ktx")
+    implementation("com.google.firebase:firebase-messaging-ktx")
 
     // Hilt DI
     implementation("com.google.dagger:hilt-android:2.48")
     kapt("com.google.dagger:hilt-compiler:2.48")
+    
     // Coil for Image Loading
     implementation("io.coil-kt:coil-compose:2.5.0")
-    // for Push notification 
-    implementation("com.google.firebase:firebase-messaging-ktx")
-
+    
+    // Accompanist for Swipe Refresh
+    implementation("com.google.accompanist:accompanist-swiperefresh:0.32.0")
 }
