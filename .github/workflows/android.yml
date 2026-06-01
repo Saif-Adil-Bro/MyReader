@@ -17,10 +17,15 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Setup Stable Gradle (ম্যাজিক ফিক্স)
+    - name: Setup Stable Gradle
       uses: gradle/actions/setup-gradle@v3
       with:
         gradle-version: '8.4'
+
+    - name: Generate Keystore on the fly (ম্যাজিক চাবি)
+      run: |
+        mkdir -p app
+        keytool -genkeypair -v -keystore app/myreader-release-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias myreader -dname "CN=MyReader, OU=App, O=Premium, C=BD" -storepass "myreader123" -keypass "myreader123"
 
     - name: Build Release APK
       run: gradle assembleRelease
