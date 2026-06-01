@@ -17,14 +17,13 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Generate Gradle Wrapper (ম্যাজিক ফিক্স)
-      run: gradle wrapper --gradle-version 8.4
-
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
+    - name: Setup Stable Gradle (ম্যাজিক ফিক্স)
+      uses: gradle/actions/setup-gradle@v3
+      with:
+        gradle-version: '8.4'
 
     - name: Build Release APK
-      run: ./gradlew assembleRelease
+      run: gradle assembleRelease
 
     - name: Upload Release APK
       uses: actions/upload-artifact@v4
