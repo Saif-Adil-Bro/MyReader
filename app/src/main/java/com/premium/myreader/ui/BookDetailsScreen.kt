@@ -32,7 +32,7 @@ fun BookDetailsScreen(book: Book, onBackClick: () -> Unit, onReadClick: (File, S
     // এখানে আপনার আসল AIza চাবিটি দুই ভাগে বসাবেন
     val generativeModel = remember {
         GenerativeModel(
-            modelName = "gemini-1.5-flash",
+            modelName = "gemini-pro",
             apiKey = "AQ.Ab8RN6IqFByF7RTurD2b" + "zLokhYd9Jx8y0Agjz6fsoIaxcBLG4g" 
         )
     }

@@ -6,6 +6,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,7 +15,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun LoginScreen(
@@ -23,11 +23,7 @@ fun LoginScreen(
     onGoogleSignInClick: () -> Unit = {},
     onGuestClick: () -> Unit = {}
 ) {
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var isLoading by remember { mutableStateOf(false) }
     val context = LocalContext.current
-    val auth = remember { FirebaseAuth.getInstance() }
 
     Column(
         modifier = Modifier.fillMaxSize().padding(32.dp),
@@ -35,72 +31,31 @@ fun LoginScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Text("My Reader", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(48.dp))
+        Spacer(modifier = Modifier.height(32.dp))
         
-        OutlinedTextField(
-            value = email, 
-            onValueChange = { email = it }, 
-            label = { Text("Email") }, 
-            leadingIcon = { Icon(Icons.Default.Email, "Email") },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp)
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        OutlinedTextField(
-            value = password, 
-            onValueChange = { password = it }, 
-            label = { Text("Password") }, 
-            leadingIcon = { Icon(Icons.Default.Lock, "Password") },
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp)
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        // ✨ ফায়ারবেস ইমেইল লগ-ইন লজিক ✨
+        // ✨ ম্যাজিক বাইপাস বাটন (ফায়ারবেস ছাড়াই সরাসরি লগ-ইন) ✨
         Button(
-            onClick = {
-                if (email.isEmpty() || password.isEmpty()) {
-                    Toast.makeText(context, "Please enter email and password", Toast.LENGTH_SHORT).show()
-                    return@Button
-                }
-                isLoading = true
-                auth.signInWithEmailAndPassword(email.trim(), password.trim())
-                    .addOnCompleteListener { task ->
-                        isLoading = false
-                        if (task.isSuccessful) {
-                            Toast.makeText(context, "Login Successful!", Toast.LENGTH_SHORT).show()
-                            onLoginSuccess()
-                        } else {
-                            // এরর হলে টোস্ট মেসেজ দেখাবে (যেমন- পাসওয়ার্ড ভুল বা অ্যাকাউন্ট নেই)
-                            Toast.makeText(context, "Error: ${task.exception?.localizedMessage}", Toast.LENGTH_LONG).show()
-                        }
-                    }
+            onClick = { 
+                Toast.makeText(context, "Developer Mode Activated! Welcome Admin.", Toast.LENGTH_SHORT).show()
+                onLoginSuccess() // সরাসরি ভেতরে নিয়ে যাবে
             },
-            modifier = Modifier.fillMaxWidth().height(50.dp),
-            shape = RoundedCornerShape(12.dp)
+            modifier = Modifier.fillMaxWidth().height(60.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
         ) {
-            if (isLoading) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
-            } else {
-                Text("Login")
-            }
+            Icon(Icons.Default.Warning, contentDescription = "Bypass", tint = MaterialTheme.colorScheme.onError)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Admin Bypass (Dev Mode)", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onError)
         }
 
+        Spacer(modifier = Modifier.height(32.dp))
+        Text(text = "Or try standard login (May fail in GitHub build):", style = MaterialTheme.typography.bodySmall)
         Spacer(modifier = Modifier.height(16.dp))
-        
-        Button(
-            onClick = onGoogleSignInClick,
-            modifier = Modifier.fillMaxWidth().height(50.dp),
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-        ) {
+
+        Button(onClick = onGoogleSignInClick, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(12.dp)) {
             Text("Sign in with Google")
         }
-
-        Spacer(modifier = Modifier.height(24.dp))
-        TextButton(onClick = onSignUpClick) { Text("Don't have an account? Sign Up") }
+        Spacer(modifier = Modifier.height(16.dp))
         TextButton(onClick = onGuestClick) { Text("Continue as Guest") }
     }
 }
