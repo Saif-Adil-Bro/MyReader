@@ -1,5 +1,6 @@
 package com.premium.myreader.ui
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
@@ -25,6 +27,7 @@ fun BookDetailsScreen(book: Book, onBackClick: () -> Unit, onReadClick: (File, S
     var aiSummary by remember { mutableStateOf<String?>(null) }
     var isAiLoading by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     val generativeModel = remember {
         GenerativeModel(
@@ -51,7 +54,6 @@ fun BookDetailsScreen(book: Book, onBackClick: () -> Unit, onReadClick: (File, S
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // ✨ কভার ফটো (যেটা আমি ভুল করে বাদ দিয়েছিলাম!) ✨
             AsyncImage(
                 model = book.getSafeCover(),
                 contentDescription = "Book Cover",
@@ -66,8 +68,16 @@ fun BookDetailsScreen(book: Book, onBackClick: () -> Unit, onReadClick: (File, S
             
             Spacer(modifier = Modifier.height(24.dp))
             
+            // ✨ ফাইল চেকিং লজিক যুক্ত করা হলো ✨
             Button(
-                onClick = { onReadClick(File(book.getSafePdf()), book.title) },
+                onClick = {
+                    val pdfFile = File(book.getSafePdf())
+                    if (pdfFile.exists()) {
+                        onReadClick(pdfFile, book.title)
+                    } else {
+                        Toast.makeText(context, "দুঃখিত! পিডিএফ ফাইলটি স্টোরেজে পাওয়া যায়নি।", Toast.LENGTH_LONG).show()
+                    }
+                },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 shape = RoundedCornerShape(12.dp)
             ) {
@@ -76,7 +86,6 @@ fun BookDetailsScreen(book: Book, onBackClick: () -> Unit, onReadClick: (File, S
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // এআই সামারি বাটন
             Button(
                 onClick = {
                     isAiLoading = true
