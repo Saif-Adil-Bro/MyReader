@@ -78,3 +78,8 @@ dependencies { implementation("io.coil-kt:coil-compose:2.5.0") }
 
 dependencies { implementation("com.google.ai.client.generativeai:generativeai:0.9.0") }
 dependencies { implementation("io.coil-kt:coil-compose:2.6.0") }
+
+dependencies { implementation(platform("io.github.jan-tennert.supabase:bom:2.4.0")) }
+dependencies { implementation("io.github.jan-tennert.supabase:postgrest-kt") }
+dependencies { implementation("io.github.jan-tennert.supabase:storage-kt") }
+dependencies { implementation("io.ktor:ktor-client-android:2.3.11") }
