@@ -5,17 +5,20 @@ data class Book(
     val title: String = "",
     val author: String = "",
     val category: String = "",
-    val description: String = "",
     val coverImageUrl: String = "",
-    val fileUrl: String = "",
-    val fileFormat: String = "PDF",
-    val isPremium: Boolean = false
-)
+    val fileUrl: String = ""
+) {
+    // স্মার্ট কভার ফটো চেকার
+    fun getSafeCover(): String {
+        val actualCover = if (fileUrl.contains("image") || fileUrl.contains(".jpg") || fileUrl.contains(".png")) fileUrl else coverImageUrl
+        
+        return if (actualCover.isBlank() || actualCover.contains(".pdf") || actualCover.contains("book")) {
+            "https://cdn-icons-png.flaticon.com/512/1173/1173260.png"
+        } else actualCover
+    }
 
-data class UserProfile(
-    val uid: String = "",
-    val name: String = "Guest User",
-    val email: String = "",
-    val readingStreakDays: Int = 0,
-    val role: String = "user"
-)
+    // স্মার্ট পিডিএফ চেকার
+    fun getSafePdf(): String {
+        return if (coverImageUrl.contains(".pdf") || coverImageUrl.contains("book")) coverImageUrl else fileUrl
+    }
+}
