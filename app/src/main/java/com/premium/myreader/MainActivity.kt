@@ -17,6 +17,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -56,10 +57,8 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // 1. Google Analytics Initialized
         analytics = Firebase.analytics
         
-        // Push Notifications Config
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channelId = "my_reader_channel"
             val channelName = "Book Notifications"
@@ -176,5 +175,8 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
         
         Spacer(modifier = Modifier.height(16.dp))
         TextButton(onClick = { isSignUpMode = !isSignUpMode }) { Text(text = if (isSignUpMode) "Already have an account? Login" else "Don't have an account? Sign Up", color = MaterialTheme.colorScheme.secondary) }
+        
+        // ফিক্স: Guest Mode বাটনটি ফিরিয়ে আনা হলো
+        TextButton(onClick = { onLoginSuccess() }) { Text("Continue as Guest", color = Color.Gray) }
     }
 }
