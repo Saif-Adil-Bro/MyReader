@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddBookScreen() {
+fun AddBookScreen(onBackClick: () -> Unit = {}) {
     var title by remember { mutableStateOf("") }
     var author by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("") }
@@ -26,7 +26,7 @@ fun AddBookScreen() {
             TopAppBar(
                 title = { Text("Upload New Book", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = { /* TODO: Go Back to Dashboard */ }) { 
+                    IconButton(onClick = { onBackClick() }) { 
                         Icon(Icons.Default.ArrowBack, "Back") 
                     }
                 },

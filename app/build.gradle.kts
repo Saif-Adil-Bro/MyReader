@@ -83,3 +83,4 @@ dependencies { implementation(platform("io.github.jan-tennert.supabase:bom:2.4.0
 dependencies { implementation("io.github.jan-tennert.supabase:postgrest-kt") }
 dependencies { implementation("io.github.jan-tennert.supabase:storage-kt") }
 dependencies { implementation("io.ktor:ktor-client-android:2.3.11") }
+dependencies { implementation("androidx.compose.material:material-icons-extended") }
