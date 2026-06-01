@@ -31,7 +31,7 @@ fun BookDetailsScreen(book: Book, onBackClick: () -> Unit, onReadClick: (File, S
 
     val generativeModel = remember {
         GenerativeModel(
-            modelName = "gemini-1.5-flash",
+            modelName = "gemini-pro",
             apiKey = "AQ.Ab8RN" + "6IqFByF7RT" + "urD2bzLokhYd9" + "Jx8y0Agjz6fsoI" + "axcBLG4g"
         )
     }
