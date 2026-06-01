@@ -12,6 +12,7 @@
         android:roundIcon="@drawable/logo"
         android:label="My Reader"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        
         <activity
             android:name=".MainActivity"
             android:exported="true">
@@ -23,17 +24,19 @@
         
         <service
            android:name=".MyFirebaseMessagingService"
-           android:exported="true">
+           android:exported="false">
           <intent-filter>
             <action android:name="com.google.firebase.MESSAGING_EVENT" />
           </intent-filter>
         </service>
         
         <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/logo" />
+
+        <meta-data
           android:name="com.google.firebase.messaging.default_notification_channel_id"
-        android:value="my_reader_channel" />
+          android:value="my_reader_channel" />
 
-       
     </application>
-
 </manifest>
