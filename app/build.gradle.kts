@@ -73,3 +73,5 @@ dependencies {
 }
 
 dependencies { implementation("com.google.android.gms:play-services-auth:20.7.0") }
+
+dependencies { implementation("io.coil-kt:coil-compose:2.5.0") }
