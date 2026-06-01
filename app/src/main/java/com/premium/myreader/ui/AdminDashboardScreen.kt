@@ -4,8 +4,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Analytics
-import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -34,7 +34,7 @@ fun AdminDashboardScreen() {
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Google Analytics Section (Placeholder)
+            // Google Analytics Section
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
@@ -44,7 +44,7 @@ fun AdminDashboardScreen() {
                     modifier = Modifier.padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Analytics, contentDescription = "Analytics", modifier = Modifier.size(40.dp))
+                    Icon(Icons.Default.Settings, contentDescription = "Analytics", modifier = Modifier.size(40.dp))
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
                         Text("App Analytics", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -55,7 +55,7 @@ fun AdminDashboardScreen() {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Supabase Database Management Section (Placeholder)
+            // Supabase Database Management Section
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
@@ -65,7 +65,7 @@ fun AdminDashboardScreen() {
                     modifier = Modifier.padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Security, contentDescription = "Database", modifier = Modifier.size(40.dp))
+                    Icon(Icons.Default.Lock, contentDescription = "Database", modifier = Modifier.size(40.dp))
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
                         Text("Content Management", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
