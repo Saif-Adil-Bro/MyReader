@@ -1,14 +1,12 @@
 package com.premium.myreader
 
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.BackHandler
+import androidx.fragment.app.FragmentActivity
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -23,6 +21,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.google.firebase.analytics.FirebaseAnalytics
+import com.google.firebase.analytics.ktx.analytics
+import com.google.firebase.ktx.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.messaging.FirebaseMessaging
@@ -49,23 +50,27 @@ sealed class Screen {
 }
 
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
+    private lateinit var analytics: FirebaseAnalytics
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // ফিক্স ১: অ্যাপ ওপেন হওয়ার সাথে সাথেই নোটিফিকেশন চ্যানেল তৈরি করা হচ্ছে
+        // 1. Google Analytics Initialized
+        analytics = Firebase.analytics
+        
+        // Push Notifications Config
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channelId = "my_reader_channel"
             val channelName = "Book Notifications"
-            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            val channel = NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_HIGH)
+            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+            val channel = android.app.NotificationChannel(channelId, channelName, android.app.NotificationManager.IMPORTANCE_HIGH)
             notificationManager.createNotificationChannel(channel)
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 101)
         }
-        
         FirebaseMessaging.getInstance().subscribeToTopic("all_users")
 
         setContent {
@@ -133,7 +138,6 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
     var password by remember { mutableStateOf("") }
     var isSignUpMode by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
-    var showResetDialog by remember { mutableStateOf(false) } 
     
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
@@ -147,13 +151,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
         OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") }, leadingIcon = { Icon(Icons.Default.Email, "Email") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), singleLine = true)
         Spacer(modifier = Modifier.height(16.dp))
         OutlinedTextField(value = password, onValueChange = { password = it }, label = { Text("Password") }, leadingIcon = { Icon(Icons.Default.Lock, "Password") }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), singleLine = true)
-        Spacer(modifier = Modifier.height(8.dp))
-
-        if (!isSignUpMode) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                TextButton(onClick = { showResetDialog = true }) { Text("Forgot Password?", color = MaterialTheme.colorScheme.primary) }
-            }
-        } else { Spacer(modifier = Modifier.height(24.dp)) }
+        Spacer(modifier = Modifier.height(32.dp))
 
         Button(onClick = {
             if (email.isNotEmpty() && password.isNotEmpty()) {
@@ -178,30 +176,5 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
         
         Spacer(modifier = Modifier.height(16.dp))
         TextButton(onClick = { isSignUpMode = !isSignUpMode }) { Text(text = if (isSignUpMode) "Already have an account? Login" else "Don't have an account? Sign Up", color = MaterialTheme.colorScheme.secondary) }
-        Spacer(modifier = Modifier.height(8.dp))
-        OutlinedButton(onClick = {
-            isLoading = true; auth.signInAnonymously().addOnCompleteListener { task -> isLoading = false; if (task.isSuccessful) onLoginSuccess() else Toast.makeText(context, task.exception?.message, Toast.LENGTH_LONG).show() }
-        }, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(12.dp), enabled = !isLoading) { Text("Continue as Guest") }
-    }
-
-    if (showResetDialog) {
-        var resetEmail by remember { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = { showResetDialog = false },
-            title = { Text("Reset Password") },
-            text = { OutlinedTextField(value = resetEmail, onValueChange = { resetEmail = it }, label = { Text("Enter your email") }, singleLine = true, modifier = Modifier.fillMaxWidth()) },
-            confirmButton = {
-                TextButton(onClick = {
-                    if (resetEmail.isNotEmpty()) {
-                        auth.sendPasswordResetEmail(resetEmail).addOnCompleteListener { task ->
-                            if (task.isSuccessful) Toast.makeText(context, "Reset link sent!", Toast.LENGTH_LONG).show()
-                            else Toast.makeText(context, task.exception?.message, Toast.LENGTH_LONG).show()
-                        }
-                        showResetDialog = false
-                    }
-                }) { Text("Send Reset Link") }
-            },
-            dismissButton = { TextButton(onClick = { showResetDialog = false }) { Text("Cancel") } }
-        )
     }
 }
