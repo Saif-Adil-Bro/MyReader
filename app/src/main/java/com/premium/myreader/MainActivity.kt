@@ -1,5 +1,7 @@
 package com.premium.myreader
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
 import android.os.Bundle
@@ -51,10 +53,19 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // নতুন: Android 13+ এর জন্য নোটিফিকেশন পারমিশন চাওয়া এবং "all_users" টপিকে সাবস্ক্রাইব করা
+        // ফিক্স ১: অ্যাপ ওপেন হওয়ার সাথে সাথেই নোটিফিকেশন চ্যানেল তৈরি করা হচ্ছে
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channelId = "my_reader_channel"
+            val channelName = "Book Notifications"
+            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val channel = NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_HIGH)
+            notificationManager.createNotificationChannel(channel)
+        }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 101)
         }
+        
         FirebaseMessaging.getInstance().subscribeToTopic("all_users")
 
         setContent {
