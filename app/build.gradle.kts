@@ -76,5 +76,5 @@ dependencies { implementation("com.google.android.gms:play-services-auth:20.7.0"
 
 dependencies { implementation("io.coil-kt:coil-compose:2.5.0") }
 
-dependencies { implementation("com.google.ai.client.generativeai:generativeai:0.7.0") }
+dependencies { implementation("com.google.ai.client.generativeai:generativeai:0.9.0") }
 dependencies { implementation("io.coil-kt:coil-compose:2.6.0") }
