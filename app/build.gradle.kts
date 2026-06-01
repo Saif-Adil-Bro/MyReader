@@ -45,5 +45,7 @@ dependencies {
     kapt("com.google.dagger:hilt-compiler:2.48")
     // Coil for Image Loading
     implementation("io.coil-kt:coil-compose:2.5.0")
+    // for Push notification 
+    implementation("com.google.firebase:firebase-messaging-ktx")
 
 }

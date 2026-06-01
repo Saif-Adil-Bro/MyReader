@@ -1,6 +1,7 @@
 package com.premium.myreader
 
 import android.content.Context
+import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -22,6 +23,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.messaging.FirebaseMessaging
 import com.premium.myreader.data.Book
 import com.premium.myreader.ui.HomeScreen
 import com.premium.myreader.ui.PdfReaderScreen
@@ -48,6 +50,13 @@ sealed class Screen {
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // নতুন: Android 13+ এর জন্য নোটিফিকেশন পারমিশন চাওয়া এবং "all_users" টপিকে সাবস্ক্রাইব করা
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 101)
+        }
+        FirebaseMessaging.getInstance().subscribeToTopic("all_users")
+
         setContent {
             val context = LocalContext.current
             val sharedPreferences = remember { context.getSharedPreferences("MyReaderPrefs", Context.MODE_PRIVATE) }
@@ -85,7 +94,6 @@ class MainActivity : ComponentActivity() {
                             ProfileScreen(isDarkMode = isDarkMode, onThemeToggle = { isDark -> isDarkMode = isDark; sharedPreferences.edit().putBoolean("dark_mode", isDark).apply() }, onBackClick = { currentScreen = Screen.Home }, onLogout = { currentScreen = Screen.Login })
                         }
                         is Screen.Reader -> { 
-                            // ফিক্স: এখানেও Named arguments ব্যবহার করা হলো
                             BackHandler { 
                                 currentScreen = Screen.Details(
                                     Book(
