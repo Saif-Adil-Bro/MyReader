@@ -20,8 +20,8 @@ fun EditBookScreen(book: Book, onBackClick: () -> Unit) {
     var title by remember { mutableStateOf(book.title) }
     var author by remember { mutableStateOf(book.author) }
     var category by remember { mutableStateOf(book.category) }
-    var coverUrl by remember { mutableStateOf(book.coverImageUrl) }
-    var pdfUrl by remember { mutableStateOf(book.fileUrl) }
+    var coverUrl by remember { mutableStateOf(book.getSafeCover()) }
+    var pdfUrl by remember { mutableStateOf(book.getSafePdf()) }
     var isLoading by remember { mutableStateOf(false) }
 
     val context = LocalContext.current

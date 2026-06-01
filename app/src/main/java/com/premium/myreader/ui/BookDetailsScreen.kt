@@ -58,7 +58,7 @@ fun BookDetailsScreen(book: Book, onBackClick: () -> Unit, onReadClick: (File, S
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             AsyncImage(
-                model = book.coverImageUrl,
+                model = book.getSafeCover(),
                 contentDescription = "Cover",
                 modifier = Modifier.height(250.dp).width(160.dp).clip(RoundedCornerShape(12.dp)),
                 contentScale = ContentScale.Crop
@@ -84,7 +84,7 @@ fun BookDetailsScreen(book: Book, onBackClick: () -> Unit, onReadClick: (File, S
                         isDownloading = true
                         coroutineScope.launch {
                             try {
-                                val file = downloadPdfLocally(context, book.fileUrl, book.id)
+                                val file = downloadPdfLocally(context, book.getSafePdf(), book.id)
                                 isDownloading = false
                                 if (file != null && file.exists() && file.length() > 0) {
                                     onReadClick(file, book.title)

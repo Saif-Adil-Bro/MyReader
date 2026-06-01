@@ -160,7 +160,7 @@ fun BookCard(book: Book, isFavorite: Boolean, isAdmin: Boolean, onFavoriteClick:
 
     Card(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp).clickable { onClick() }, elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            AsyncImage(model = book.coverImageUrl, contentDescription = "Book Cover", modifier = Modifier.width(80.dp).height(120.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
+            AsyncImage(model = book.getSafeCover(), contentDescription = "Book Cover", modifier = Modifier.width(80.dp).height(120.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) { 
                 Text(text = book.title, style = MaterialTheme.typography.titleLarge)
