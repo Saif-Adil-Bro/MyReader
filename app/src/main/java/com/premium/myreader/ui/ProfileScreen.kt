@@ -16,7 +16,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Timeline
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -44,7 +44,6 @@ fun ProfileScreen(
     
     var isBiometricEnabled by remember { mutableStateOf(sharedPreferences.getBoolean("biometric_enabled", false)) }
     
-    // 3. Load Offline Reading History
     val historyList = remember {
         sharedPreferences.all.filterKeys { it.startsWith("last_page_") }
             .mapNotNull { (key, value) ->
@@ -107,7 +106,7 @@ fun ProfileScreen(
                     Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                         Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Timeline, contentDescription = "History", tint = MaterialTheme.colorScheme.primary)
+                                Icon(Icons.Default.List, contentDescription = "History", tint = MaterialTheme.colorScheme.primary)
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(text = "Reading History", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             }

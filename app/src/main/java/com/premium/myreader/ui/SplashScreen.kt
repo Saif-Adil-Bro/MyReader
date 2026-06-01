@@ -1,5 +1,6 @@
 package com.premium.myreader.ui
 
+import android.content.Context
 import android.view.animation.OvershootInterpolator
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -41,7 +42,6 @@ fun SplashScreen(onNavigateToHome: () -> Unit, onNavigateToLogin: () -> Unit) {
         
         if (auth.currentUser != null) {
             if (isBiometricEnabled && activity != null) {
-                // 2. Biometric Prompt
                 val executor = ContextCompat.getMainExecutor(context)
                 val biometricPrompt = BiometricPrompt(activity, executor,
                     object : BiometricPrompt.AuthenticationCallback() {
@@ -51,7 +51,7 @@ fun SplashScreen(onNavigateToHome: () -> Unit, onNavigateToLogin: () -> Unit) {
                         }
                         override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                             super.onAuthenticationError(errorCode, errString)
-                            onNavigateToLogin() // Error e log in page e niye jabe
+                            onNavigateToLogin() 
                         }
                     })
                 
