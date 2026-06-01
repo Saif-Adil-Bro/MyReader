@@ -4,8 +4,6 @@ import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -13,7 +11,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -33,11 +30,11 @@ fun LoginScreen(
         Text("My Reader", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(32.dp))
         
-        // ✨ ম্যাজিক বাইপাস বাটন (ফায়ারবেস ছাড়াই সরাসরি লগ-ইন) ✨
+        // ম্যাজিক বাইপাস বাটন
         Button(
             onClick = { 
                 Toast.makeText(context, "Developer Mode Activated! Welcome Admin.", Toast.LENGTH_SHORT).show()
-                onLoginSuccess() // সরাসরি ভেতরে নিয়ে যাবে
+                onLoginSuccess() 
             },
             modifier = Modifier.fillMaxWidth().height(60.dp),
             shape = RoundedCornerShape(12.dp),
@@ -49,9 +46,6 @@ fun LoginScreen(
         }
 
         Spacer(modifier = Modifier.height(32.dp))
-        Text(text = "Or try standard login (May fail in GitHub build):", style = MaterialTheme.typography.bodySmall)
-        Spacer(modifier = Modifier.height(16.dp))
-
         Button(onClick = onGoogleSignInClick, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(12.dp)) {
             Text("Sign in with Google")
         }
