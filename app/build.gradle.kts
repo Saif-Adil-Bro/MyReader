@@ -71,3 +71,5 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.5.0")
     implementation("com.google.accompanist:accompanist-swiperefresh:0.32.0")
 }
+
+dependencies { implementation("com.google.android.gms:play-services-auth:20.7.0") }
