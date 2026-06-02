@@ -112,11 +112,13 @@ fun BookDetailsScreen(book: Book, onBackClick: () -> Unit, onReadClick: (File, S
             Spacer(Modifier.height(16.dp))
 
             // ✨ ম্যাজিক AI বাটন (গুগল SDK ছাড়া ডিরেক্ট API Call) ✨
+                        // ✨ ফাইনাল এপিআই কল লজিক ✨
             Button(
                 onClick = {
                     isAiLoading = true
                     coroutineScope.launch {
-                        val apiKey = "AQ.Ab8RN6IAXhvLYK9eDvG7PZREYK6Wf2gnxVwJdTTpJp9SkctmMA"
+                        // আপনার আসল AIza চাবিটি এখানে সুন্দরভাবে বসানো হলো
+                        val apiKey = "AIzaSyB9KOG8dUZO78XSxtWIylwsVy6vlbjXPFE"
                         val prompt = "Write a short, engaging, and spoiler-free summary for the book '${book.title}' by ${book.author} in Bengali language."
                         aiSummary = generateSummaryDirectly(apiKey, prompt)
                         isAiLoading = false
@@ -132,6 +134,7 @@ fun BookDetailsScreen(book: Book, onBackClick: () -> Unit, onReadClick: (File, S
                     Text("✨ Generate AI Summary", style = MaterialTheme.typography.titleMedium)
                 }
             }
+
 
             if (aiSummary != null) {
                 Spacer(modifier = Modifier.height(24.dp))
