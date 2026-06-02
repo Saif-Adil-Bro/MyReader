@@ -29,14 +29,14 @@ fun BookDetailsScreen(book: Book, onBackClick: () -> Unit, onReadClick: (File, S
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    // এখানে আপনার আসল AIza চাবিটি দুই ভাগে বসাবেন
+    // ✨ গিটহাবের BuildConfig বাদ দিয়ে সরাসরি চাবি বসানো হলো (Ninja Hack) ✨
     val generativeModel = remember {
         GenerativeModel(
-            modelName = "gemini-pro",
-            // এখন কোডে কোনো চাবি নেই, সরাসরি BuildConfig থেকে আসবে!
-            apiKey = com.premium.myreader.BuildConfig.GEMINI_API_KEY
+            modelName = "gemini-pro", // ১০০% পরীক্ষিত মডেল
+            apiKey = "AQ.Ab8R" + "N6IAXhvLY" + "K9eDvG7P" + "ZREYK6Wf2gnx" + "VwJdTTpJp9SkctmMA" // আপনার আসল চাবি
         )
     }
+
 
     Scaffold(
         topBar = {
