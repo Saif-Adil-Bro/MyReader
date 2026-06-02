@@ -33,7 +33,8 @@ fun BookDetailsScreen(book: Book, onBackClick: () -> Unit, onReadClick: (File, S
     val generativeModel = remember {
         GenerativeModel(
             modelName = "gemini-pro",
-            apiKey = "AQ.Ab8RN6IqFByF7RTurD2b" + "zLokhYd9Jx8y0Agjz6fsoIaxcBLG4g" 
+            // এখন কোডে কোনো চাবি নেই, সরাসরি BuildConfig থেকে আসবে!
+            apiKey = com.premium.myreader.BuildConfig.GEMINI_API_KEY
         )
     }
 

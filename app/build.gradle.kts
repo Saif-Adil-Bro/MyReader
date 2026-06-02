@@ -18,6 +18,11 @@ android {
             keyPassword = "myreader123"
         }
     }
+    
+    // এই বিল্ড ফিচারটা চালু করতে হবে
+    buildFeatures {
+        buildConfig = true
+    }
 
     defaultConfig {
         applicationId = "com.premium.myreader"
@@ -26,6 +31,10 @@ android {
         versionCode = 2
         versionName = "1.1.0"
         multiDexEnabled = true
+        
+        // ✨ গিটহাব একশন থেকে এপিআই কি রিসিভ করার কোড ✨
+        val geminiKey = System.getenv("GEMINI_API_KEY") ?: "NO_KEY"
+        buildConfigField("String", "GEMINI_API_KEY", "\"$geminiKey\"")
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
