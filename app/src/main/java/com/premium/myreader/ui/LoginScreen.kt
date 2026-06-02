@@ -26,7 +26,7 @@ fun LoginScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
-    var isSignUpMode by remember { mutableStateOf(false) } // নতুন: লগ-ইন নাকি সাইন-আপ মোড
+    var isSignUpMode by remember { mutableStateOf(false) } // নতুন: লগ-ইন নাকি সাইন-আপ মোড হুম
     
     val context = LocalContext.current
     val auth = remember { FirebaseAuth.getInstance() }

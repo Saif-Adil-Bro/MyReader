@@ -1,5 +1,7 @@
 package com.premium.myreader.ui
 
+import android.content.Context
+import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -7,43 +9,54 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import com.google.ai.client.generativeai.GenerativeModel
 import com.premium.myreader.data.Book
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
 import java.io.File
+import java.io.FileOutputStream
+import java.net.HttpURLConnection
+import java.net.URL
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BookDetailsScreen(book: Book, onBackClick: () -> Unit, onReadClick: (File, String) -> Unit) {
+    var isDownloading by remember { mutableStateOf(false) }
     var aiSummary by remember { mutableStateOf<String?>(null) }
     var isAiLoading by remember { mutableStateOf(false) }
-    val coroutineScope = rememberCoroutineScope()
+    
     val context = LocalContext.current
-
-    // ✨ গিটহাবের BuildConfig বাদ দিয়ে সরাসরি চাবি বসানো হলো (Ninja Hack) ✨
-    val generativeModel = remember {
-        GenerativeModel(
-            modelName = "gemini-pro", // ১০০% পরীক্ষিত মডেল
-            apiKey = "AQ.Ab8R" + "N6IAXhvLY" + "K9eDvG7P" + "ZREYK6Wf2gnx" + "VwJdTTpJp9SkctmMA" // আপনার আসল চাবি
-        )
-    }
-
+    val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Book Details") },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) { Icon(Icons.Default.ArrowBack, "Back") }
+                navigationIcon = { IconButton(onClick = onBackClick) { Icon(Icons.Default.ArrowBack, "Back") } },
+                actions = {
+                    IconButton(onClick = {
+                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_SUBJECT, "Check out this amazing book!")
+                            putExtra(Intent.EXTRA_TEXT, "Hey! I am reading '${book.title}' by ${book.author} on My Reader app.")
+                        }
+                        context.startActivity(Intent.createChooser(shareIntent, "Share Book"))
+                    }) {
+                        Icon(Icons.Default.Share, contentDescription = "Share Book")
+                    }
                 }
             )
         }
@@ -52,64 +65,71 @@ fun BookDetailsScreen(book: Book, onBackClick: () -> Unit, onReadClick: (File, S
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp)
+                .padding(24.dp)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             AsyncImage(
-                model = book.getSafeCover(),
-                contentDescription = "Book Cover",
-                modifier = Modifier.height(200.dp).width(140.dp),
+                model = book.coverImageUrl,
+                contentDescription = "Cover",
+                modifier = Modifier.height(250.dp).width(160.dp).clip(RoundedCornerShape(12.dp)),
                 contentScale = ContentScale.Crop
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(24.dp))
+            
+            // ✨ আপনার অরিজিনাল ডিজাইনের সাথে মিল রেখে Title, Author এবং Category ✨
+            Text(book.title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(8.dp))
+            Text("Author: ${book.author}", style = MaterialTheme.typography.titleMedium)
+            Text("Category: ${book.category}", style = MaterialTheme.typography.titleMedium)
+            
+            Spacer(Modifier.height(32.dp))
 
-            Text(text = book.title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-            Text(text = "Author: ${book.author}", style = MaterialTheme.typography.titleMedium)
-            Text(text = "Category: ${book.category}", style = MaterialTheme.typography.bodyMedium)
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            Button(
-                onClick = {
-                    val pdfFile = File(book.getSafePdf())
-                    if (pdfFile.exists()) {
-                        onReadClick(pdfFile, book.title)
-                    } else {
-                        Toast.makeText(context, "দুঃখিত! পিডিএফ ফাইলটি স্টোরেজে পাওয়া যায়নি।", Toast.LENGTH_LONG).show()
-                    }
-                },
-                modifier = Modifier.fillMaxWidth().height(50.dp),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text("Read Book")
+            if (isDownloading) {
+                CircularProgressIndicator()
+                Text("Preparing Book...", modifier = Modifier.padding(top = 16.dp), color = MaterialTheme.colorScheme.primary)
+            } else {
+                Button(
+                    onClick = {
+                        isDownloading = true
+                        coroutineScope.launch {
+                            val file = downloadPdfLocally(context, book.fileUrl, book.id)
+                            isDownloading = false
+                            if (file != null) {
+                                onReadClick(file, book.title)
+                            } else {
+                                Toast.makeText(context, "Failed to download book.", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().height(55.dp),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Read Book", style = MaterialTheme.typography.titleMedium)
+                }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(16.dp))
 
+            // ✨ ম্যাজিক AI বাটন (গুগল SDK ছাড়া ডিরেক্ট API Call) ✨
             Button(
                 onClick = {
                     isAiLoading = true
                     coroutineScope.launch {
-                        try {
-                            val prompt = "Write a short, engaging, and spoiler-free summary for the book '${book.title}' by ${book.author} in Bengali language. Format it nicely."
-                            val response = generativeModel.generateContent(prompt)
-                            aiSummary = response.text
-                        } catch (e: Exception) {
-                            aiSummary = "দুঃখিত, সামারি জেনারেট করতে সমস্যা হয়েছে: ${e.message}"
-                        } finally {
-                            isAiLoading = false
-                        }
+                        val apiKey = "AQ.Ab8RN6IAXhvLYK9eDvG7PZREYK6Wf2gnxVwJdTTpJp9SkctmMA"
+                        val prompt = "Write a short, engaging, and spoiler-free summary for the book '${book.title}' by ${book.author} in Bengali language."
+                        aiSummary = generateSummaryDirectly(apiKey, prompt)
+                        isAiLoading = false
                     }
                 },
-                modifier = Modifier.fillMaxWidth().height(50.dp),
+                modifier = Modifier.fillMaxWidth().height(55.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
             ) {
                 if (isAiLoading) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onTertiary)
                 } else {
-                    Text("✨ Generate AI Summary")
+                    Text("✨ Generate AI Summary", style = MaterialTheme.typography.titleMedium)
                 }
             }
 
@@ -127,6 +147,59 @@ fun BookDetailsScreen(book: Book, onBackClick: () -> Unit, onReadClick: (File, S
                     }
                 }
             }
+        }
+    }
+}
+
+// ✨ গুগলের বাগ-ভরা লাইব্রেরি বাইপাস করার জন্য প্রো-লেভেল ফাংশন ✨
+suspend fun generateSummaryDirectly(apiKey: String, prompt: String): String {
+    return withContext(Dispatchers.IO) {
+        try {
+            val url = URL("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey")
+            val connection = url.openConnection() as HttpURLConnection
+            connection.requestMethod = "POST"
+            connection.setRequestProperty("Content-Type", "application/json")
+            connection.doOutput = true
+
+            val jsonBody = JSONObject().apply {
+                put("contents", JSONArray().apply {
+                    put(JSONObject().apply {
+                        put("parts", JSONArray().apply {
+                            put(JSONObject().apply { put("text", prompt) })
+                        })
+                    })
+                })
+            }.toString()
+
+            connection.outputStream.use { it.write(jsonBody.toByteArray()) }
+
+            if (connection.responseCode == 200) {
+                val response = connection.inputStream.bufferedReader().readText()
+                val jsonResponse = JSONObject(response)
+                return@withContext jsonResponse.getJSONArray("candidates")
+                    .getJSONObject(0).getJSONObject("content")
+                    .getJSONArray("parts").getJSONObject(0).getString("text")
+            } else {
+                val err = connection.errorStream?.bufferedReader()?.readText() ?: "Unknown Error"
+                return@withContext "API Error (${connection.responseCode}): $err"
+            }
+        } catch (e: Exception) {
+            return@withContext "Error: ${e.message}"
+        }
+    }
+}
+
+suspend fun downloadPdfLocally(context: Context, urlString: String, bookId: String): File? {
+    return withContext(Dispatchers.IO) {
+        try {
+            val file = File(context.cacheDir, "$bookId.pdf")
+            if (file.exists() && file.length() > 0) return@withContext file
+            val url = URL(urlString)
+            val connection = url.openConnection().apply { connect() }
+            connection.getInputStream().use { input -> FileOutputStream(file).use { output -> input.copyTo(output) } }
+            file
+        } catch (e: Exception) {
+            null
         }
     }
 }
