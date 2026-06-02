@@ -19,13 +19,14 @@ import com.google.firebase.auth.FirebaseAuth
 @Composable
 fun LoginScreen(
     onLoginSuccess: () -> Unit = {},
-    onSignUpClick: () -> Unit = {},
+    onSignUpClick: () -> Unit = {}, // আপনার আগের প্যারামিটার অক্ষত রাখা হয়েছে
     onGoogleSignInClick: () -> Unit = {},
     onGuestClick: () -> Unit = {}
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
+    var isSignUpMode by remember { mutableStateOf(false) } // নতুন: লগ-ইন নাকি সাইন-আপ মোড
     
     val context = LocalContext.current
     val auth = remember { FirebaseAuth.getInstance() }
@@ -36,7 +37,11 @@ fun LoginScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Text("My Reader", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(40.dp))
+        Spacer(modifier = Modifier.height(10.dp))
+        
+        // ডাইনামিক সাব-টাইটেল
+        Text(if (isSignUpMode) "Create a new account" else "Login to continue", style = MaterialTheme.typography.bodyMedium)
+        Spacer(modifier = Modifier.height(30.dp))
 
         // ইমেইল ইনপুট
         OutlinedTextField(
@@ -63,7 +68,7 @@ fun LoginScreen(
         )
         Spacer(modifier = Modifier.height(24.dp))
 
-        // ✨ আসল ফায়ারবেস ইমেইল/পাসওয়ার্ড লগ-ইন লজিক ✨
+        // ✨ ডাইনামিক ফায়ারবেস ইমেইল/পাসওয়ার্ড লজিক ✨
         Button(
             onClick = {
                 if (email.isEmpty() || password.isEmpty()) {
@@ -71,16 +76,32 @@ fun LoginScreen(
                     return@Button
                 }
                 isLoading = true
-                auth.signInWithEmailAndPassword(email.trim(), password.trim())
-                    .addOnCompleteListener { task ->
-                        isLoading = false
-                        if (task.isSuccessful) {
-                            Toast.makeText(context, "Login Successful!", Toast.LENGTH_SHORT).show()
-                            onLoginSuccess()
-                        } else {
-                            Toast.makeText(context, "Error: ${task.exception?.localizedMessage}", Toast.LENGTH_LONG).show()
+                
+                if (isSignUpMode) {
+                    // অ্যাকাউন্ট তৈরি করার লজিক (Sign Up)
+                    auth.createUserWithEmailAndPassword(email.trim(), password.trim())
+                        .addOnCompleteListener { task ->
+                            isLoading = false
+                            if (task.isSuccessful) {
+                                Toast.makeText(context, "Account Created Successfully!", Toast.LENGTH_SHORT).show()
+                                onLoginSuccess()
+                            } else {
+                                Toast.makeText(context, "Signup Error: ${task.exception?.localizedMessage}", Toast.LENGTH_LONG).show()
+                            }
                         }
-                    }
+                } else {
+                    // লগ-ইন করার লজিক (Login)
+                    auth.signInWithEmailAndPassword(email.trim(), password.trim())
+                        .addOnCompleteListener { task ->
+                            isLoading = false
+                            if (task.isSuccessful) {
+                                Toast.makeText(context, "Login Successful!", Toast.LENGTH_SHORT).show()
+                                onLoginSuccess()
+                            } else {
+                                Toast.makeText(context, "Error: ${task.exception?.localizedMessage}", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                }
             },
             modifier = Modifier.fillMaxWidth().height(50.dp),
             shape = RoundedCornerShape(12.dp)
@@ -88,15 +109,15 @@ fun LoginScreen(
             if (isLoading) {
                 CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
             } else {
-                Text("Login")
+                Text(if (isSignUpMode) "Sign Up" else "Login")
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
         
-        // সাইন-আপ বাটনে যাওয়া
-        TextButton(onClick = onSignUpClick) {
-            Text("Don't have an account? Sign Up")
+        // মোড চেঞ্জ করার বাটন
+        TextButton(onClick = { isSignUpMode = !isSignUpMode }) {
+            Text(if (isSignUpMode) "Already have an account? Login" else "Don't have an account? Sign Up")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
