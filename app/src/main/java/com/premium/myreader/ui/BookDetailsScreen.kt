@@ -124,4 +124,57 @@ fun BookDetailsScreen(book: Book, onBackClick: () -> Unit, onReadClick: (File, S
         }
     }
 }
-// [generateSummaryDirectly এবং downloadPdfLocally ফাংশনগুলো আগের মতোই থাকবে]
+
+// 🌐 গুগলের বাগ-ভরা লাইব্রেরি বাইপাস করার জন্য ডিরেক্ট এপিআই কল ফাংশন
+suspend fun generateSummaryDirectly(apiKey: String, prompt: String): String {
+    return withContext(Dispatchers.IO) {
+        try {
+            val url = URL("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey")
+            val connection = url.openConnection() as HttpURLConnection
+            connection.requestMethod = "POST"
+            connection.setRequestProperty("Content-Type", "application/json")
+            connection.doOutput = true
+
+            val jsonBody = JSONObject().apply {
+                put("contents", JSONArray().apply {
+                    put(JSONObject().apply {
+                        put("parts", JSONArray().apply {
+                            put(JSONObject().apply { put("text", prompt) })
+                        })
+                    })
+                })
+            }.toString()
+
+            connection.outputStream.use { it.write(jsonBody.toByteArray()) }
+
+            if (connection.responseCode == 200) {
+                val response = connection.inputStream.bufferedReader().readText()
+                val jsonResponse = JSONObject(response)
+                return@withContext jsonResponse.getJSONArray("candidates")
+                    .getJSONObject(0).getJSONObject("content")
+                    .getJSONArray("parts").getJSONObject(0).getString("text")
+            } else {
+                val err = connection.errorStream?.bufferedReader()?.readText() ?: "Unknown Error"
+                return@withContext "API Error (${connection.responseCode}): $err"
+            }
+        } catch (e: Exception) {
+            return@withContext "Error: ${e.message}"
+        }
+    }
+}
+
+// 📂 পিডিএফ ফাইল লোকালি ডাউনলোড করার ব্যাকগ্রাউন্ড ফাংশন
+suspend fun downloadPdfLocally(context: Context, urlString: String, bookId: String): File? {
+    return withContext(Dispatchers.IO) {
+        try {
+            val file = File(context.cacheDir, "$bookId.pdf")
+            if (file.exists() && file.length() > 0) return@withContext file
+            val url = URL(urlString)
+            val connection = url.openConnection().apply { connect() }
+            connection.getInputStream().use { input -> FileOutputStream(file).use { output -> input.copyTo(output) } }
+            file
+        } catch (e: Exception) {
+            null
+        }
+    }
+}
